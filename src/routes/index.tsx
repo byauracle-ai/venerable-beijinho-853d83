@@ -12,8 +12,7 @@ const img = (f: string) => `${BASE}/${encodeURIComponent(f)}`
 // Hero: the pool/blue-hour image uploaded by user — add to public folder as 'hero-pool.jpg'
 const HERO        = img('205032606_4198387713573399_8106792087768550505_n.jpg')
 const IMG_EXT1    = img('Screenshot 2026-03-21 175630.png')
-const IMG_EXT2    = img('Modern-Dream-House-McClean-Design-09-1-Kindesign')
-const IMG_INT1    = img('Screenshot 2026-05-14 202045.png')
+
 const IMG_INT2    = img('Screenshot 2026-05-14 201935.png')
 const IMG_INT3    = img('Screenshot 2026-05-14 201944.png')
 const IMG_POOL    = img('Screenshot 2026-05-14 202001.png')
@@ -23,7 +22,7 @@ const IMG_GARDEN  = img('Screenshot 2026-05-14 202054.png')
 const IMG_STAIRS  = img('Screenshot 2026-05-11 171922.png')
 const IMG_SPA1    = img('Screenshot 2026-05-14 202025.png')
 const IMG_SPA2    = img('Screenshot 2026-05-15 220411.png')
-const IMG_SPA3    = img('Image.jpg')
+
 
 // ── useInView ────────────────────────────────────────────────────────────────
 function useInView(threshold = 0.18) {
@@ -559,7 +558,7 @@ function WellnessSection() {
       />
       <FullBleed src={IMG_SPA1} eyebrow="Concierge" title="Your Dedicated Curator" sub="A personal wellness director available around the clock — anticipating every need before it becomes one." objectPos="center 30%" dim={0.5} />
       <FullBleed src={IMG_SPA2} eyebrow="Treatment" title="The Treatment Sanctuary" sub="Bespoke rituals drawn from ancient Mauritian healing traditions — volcanic stone, cold ocean mineral, island botanicals." textAlign="right" dim={0.5} />
-      <FullBleed src={IMG_SPA3} eyebrow="Restoration" title="Deep Restoration" sub="Total silence. Total surrender. Total renewal." textAlign="center" dim={0.6} />
+
 
       {/* Spa offerings */}
       <SpaOfferings />
@@ -731,8 +730,7 @@ function HomePage() {
 
       {/* Estate journey — full bleed panels, each its own world */}
       <FullBleed id="estate" src={IMG_EXT1}   eyebrow="Arrival"       title="The Approach"         sub="A private driveway through two hectares of tropical canopy — the estate reveals itself slowly, deliberately." objectPos="center 40%" />
-      <FullBleed             src={IMG_EXT2}   eyebrow="Architecture"   title="Designed to Disappear" sub="Award-winning design by Atelier Côté Sud — a building that serves the landscape rather than imposing upon it." textAlign="right" objectPos="center 35%" />
-      <FullBleed             src={IMG_INT1}   eyebrow="Exterior"       title="The Estate"            sub="Every facade considered. Every angle intentional. Every shadow earned." objectPos="center" />
+
 
       <Specs />
 
