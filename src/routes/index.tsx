@@ -57,13 +57,4 @@ function NavBar() {
           <span>Private Viewing</span>
         </a>
       </div>
-      <button
-        onClick={() => setMenuOpen(!menuOpen)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'none' }}
-        className="mobile-menu-btn"
-        aria-label="Menu"
-      >
-        <div style={{ width: '24px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <span style={{ display: 'block', height: '1px', background: menuOpen ? 'var(--gold)' : 'var(--text-primary)', transition: 'all 0.3s', transform: menuOpen ? 'translateY(6px) rotate(45deg)' : 'none' }} />
-          <span style={{ display: 'block', height: '1px', background: menuOpen ? 'transparent' : 'var(--text-primary)', transition: 'all 0.3s', opacity: menuOpen ? 0 : 1 }} />
-          <span style={{ display: 'block', height: '1px', background: menuOpen ? 'var(--gold)' : 'var(--text-primary)', transition: 'all 0.3s', transform:
+    </nav
