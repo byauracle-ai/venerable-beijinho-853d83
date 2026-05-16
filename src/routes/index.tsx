@@ -1,1160 +1,1685 @@
-import { useState, useEffect, useRef } from "react"
-
-// ─── Image base ───────────────────────────────────────────────────────────────
-const PUB = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main'
-const p = (f) => `${PUB}/${encodeURIComponent(f)}`
-
-const IMG = {
-  hero:       p('descent.jpg'),
-  entrance:   p('Entrance.png'),
-  window:     p('window.png'),
-  interior:   p('Interior.png'),
-  pool1:      p('Infinity Pool.png'),
-  pool2:      p('Infinity Pool 2.png'),
-  master:     p('Master.png'),
-  seaView:    p('Sea View.png'),
-  seaView2:   p('Sea View 2.png'),
-  penthouse:  p('Penthouse-Interior-scaled.jpg'),
-  living:     p('Living Area.png'),
-  outdoor:    p('Outdoor.png'),
-  seaVIew:    p('Sea VIew.png'),
-  screenshot: p('Screenshot 2026-05-14 202001.png'),
-  spaEntry:   p('Spa Entry.png'),
-  spa1:       p('Spa 1.png'),
-  spa2:       p('Spa 2.png'),
-  spa3:       p('Spa 3.jpg'),
-}
-
-// ─── Hooks ────────────────────────────────────────────────────────────────────
-function useInView(threshold = 0.12) {
-  const ref = useRef(null)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    const el = ref.current; if (!el) return
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setVisible(true) },
-      { threshold }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [threshold])
-  return { ref, visible }
-}
-
-function useCount(target, active, duration = 2200, dec = 0) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!active) return
-    const start = performance.now()
-    const tick = (now) => {
-      const t = Math.min(1, (now - start) / duration)
-      const ease = 1 - Math.pow(1 - t, 3)
-      setVal(parseFloat((ease * target).toFixed(dec)))
-      if (t < 1) requestAnimationFrame(tick)
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VENTUS — East Coast, Mauritius.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <style>
+    :root {
+      --bg:        #090907;
+      --s1:        #0e0e0c;
+      --s2:        #141412;
+      --s3:        #1b1b18;
+      --gold:      #c9a84c;
+      --gold-lt:   #e2c97e;
+      --gold-dk:   #8b6f2e;
+      --gold-hair: rgba(201,168,76,.22);
+      --gold-glow: rgba(201,168,76,.08);
+      --white:     #f0ede6;
+      --mid:       #b0ab9f;
+      --mute:      #6a6660;
+      --border:    rgba(201,168,76,.14);
+      --border-hi: rgba(201,168,76,.38);
+      --serif:     'Cormorant Garamond', Georgia, serif;
+      --sans:      'Montserrat', system-ui, sans-serif;
     }
-    requestAnimationFrame(tick)
-  }, [active, target])
-  return val
-}
-
-// ─── Global Styles ────────────────────────────────────────────────────────────
-function Styles() {
-  return (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Cinzel:wght@300;400;500&family=Jost:wght@100;200;300;400&display=swap');
-
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-      :root {
-        --K: #04040a;
-        --D: #07070e;
-        --M: #0c0c18;
-        --S: #0a0a14;
-        --spa: #030308;
-        --gold: #c8a85c;
-        --gold2: #e2c882;
-        --gold3: #a8883c;
-        --T: #f2ede6;
-        --T2: #8a8478;
-        --T3: #4a4840;
-        --BL: rgba(200,168,92,0.08);
-        --BH: rgba(200,168,92,0.22);
-        --F: 'Cormorant Garamond', Georgia, serif;
-        --H: 'Cinzel', serif;
-        --B: 'Jost', sans-serif;
-      }
-
-      html { scroll-behavior: auto; }
-
-      body {
-        background: var(--K);
-        color: var(--T);
-        font-family: var(--B);
-        font-weight: 300;
-        -webkit-font-smoothing: antialiased;
-        overflow-x: hidden;
-        cursor: none;
-      }
-
-      body::after {
-        content: ''; position: fixed; inset: 0; pointer-events: none;
-        z-index: 9000; opacity: 0.025;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        background-size: 160px;
-      }
-
-      .cap {
-        font-family: var(--B); font-size: 9px; font-weight: 200;
-        letter-spacing: 0.42em; text-transform: uppercase; color: var(--gold);
-      }
-
-      .nl { font-family: var(--B); font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--T2); text-decoration: none; font-weight: 200; transition: color 0.4s; }
-      .nl:hover { color: var(--gold2); }
-
-      .btn { display: inline-block; font-family: var(--B); font-size: 8px; font-weight: 200; letter-spacing: 0.34em; text-transform: uppercase; text-decoration: none; padding: 13px 32px; transition: all 0.5s; cursor: none; border: none; outline: none; }
-      .bg  { background: var(--gold); color: var(--K); }
-      .bg:hover { background: var(--gold2); box-shadow: 0 8px 48px rgba(200,168,92,0.28); }
-      .bl  { background: transparent; border: 1px solid var(--BH); color: var(--T); }
-      .bl:hover { border-color: var(--gold); color: var(--gold2); background: rgba(200,168,92,0.04); }
-
-      #pb { position: fixed; top: 0; left: 0; height: 1px; background: linear-gradient(90deg, var(--gold3), var(--gold), var(--gold2)); z-index: 8000; }
-
-      input, textarea {
-        font-family: var(--B); font-size: 13px; font-weight: 200; letter-spacing: 0.08em;
-        background: transparent; border: none; border-bottom: 1px solid rgba(200,168,92,0.12);
-        color: var(--T); padding: 16px 0; width: 100%; outline: none; transition: border-color 0.4s;
-      }
-      input:focus, textarea:focus { border-color: rgba(200,168,92,0.5); }
-      input::placeholder, textarea::placeholder { color: var(--T3); letter-spacing: 0.04em; }
-
-      @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes pulse  { 0%,100%{opacity:0.15;transform:scaleY(0.2)} 50%{opacity:0.6;transform:scaleY(1)} }
-      @keyframes breathe { 0%,100%{opacity:0.4} 50%{opacity:0.8} }
-      @keyframes slideRight { from{transform:scaleX(0)} to{transform:scaleX(1)} }
-
-      @media (max-width: 768px) {
-        .hm { display: none !important; }
-        .c2 { grid-template-columns: 1fr !important; }
-        .c3 { grid-template-columns: 1fr !important; }
-        .c4 { grid-template-columns: 1fr 1fr !important; }
-        .c6 { grid-template-columns: repeat(3,1fr) !important; }
-        .c7 { grid-template-columns: repeat(2,1fr) !important; }
-      }
-    `}</style>
-  )
-}
-
-// ─── Cursor ───────────────────────────────────────────────────────────────────
-function Cursor() {
-  const dot  = useRef(null)
-  const ring = useRef(null)
-  const pos  = useRef({ x: -200, y: -200 })
-  const lag  = useRef({ x: -200, y: -200 })
-
-  useEffect(() => {
-    const onMove = (e) => {
-      pos.current = { x: e.clientX, y: e.clientY }
-      if (dot.current) {
-        dot.current.style.transform = `translate(${e.clientX}px,${e.clientY}px) translate(-50%,-50%)`
-        dot.current.style.opacity = '1'
-      }
-      const t = e.target
-      const isImg = !!t.closest('section, .img-wrap')
-      const isBtn = !!t.closest('a, button')
-      if (ring.current) {
-        ring.current.style.width  = isImg ? '52px' : isBtn ? '32px' : '20px'
-        ring.current.style.height = isImg ? '52px' : isBtn ? '32px' : '20px'
-        ring.current.style.borderColor = isBtn ? 'var(--gold2)' : 'rgba(200,168,92,0.3)'
-      }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; background: var(--bg); }
+    body {
+      font-family: var(--sans);
+      color: var(--white);
+      background: var(--bg);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      cursor: none;
     }
-    let raf
-    const lerp = () => {
-      lag.current.x += (pos.current.x - lag.current.x) * 0.08
-      lag.current.y += (pos.current.y - lag.current.y) * 0.08
-      if (ring.current)
-        ring.current.style.transform = `translate(${lag.current.x}px,${lag.current.y}px) translate(-50%,-50%)`
-      raf = requestAnimationFrame(lerp)
+    ::selection { background: rgba(201,168,76,.2); }
+    img { display: block; width: 100%; }
+    a { color: inherit; text-decoration: none; }
+
+    /* CURSOR */
+    #cur, #cur-ring {
+      position: fixed; top: 0; left: 0;
+      border-radius: 50%; pointer-events: none;
+      z-index: 9900; transform: translate(-50%,-50%);
     }
-    raf = requestAnimationFrame(lerp)
-    window.addEventListener('mousemove', onMove)
-    return () => { window.removeEventListener('mousemove', onMove); cancelAnimationFrame(raf) }
-  }, [])
+    #cur { width: 8px; height: 8px; background: var(--gold); mix-blend-mode: screen; }
+    #cur-ring { width: 32px; height: 32px; border: 1px solid rgba(201,168,76,.5); }
 
-  return (
-    <>
-      <div ref={dot} style={{ position:'fixed',top:0,left:0,width:4,height:4,borderRadius:'50%',background:'var(--gold)',pointerEvents:'none',zIndex:9999,opacity:0,willChange:'transform' }} />
-      <div ref={ring} style={{ position:'fixed',top:0,left:0,width:20,height:20,borderRadius:'50%',border:'1px solid rgba(200,168,92,0.3)',pointerEvents:'none',zIndex:9998,willChange:'transform',transition:'width 0.5s cubic-bezier(.16,1,.3,1),height 0.5s cubic-bezier(.16,1,.3,1),border-color 0.3s' }} />
-    </>
-  )
-}
-
-// ─── Curtain ──────────────────────────────────────────────────────────────────
-function Curtain() {
-  const [opacity, setOpacity] = useState(1)
-  const [gone, setGone] = useState(false)
-  useEffect(() => {
-    const t1 = setTimeout(() => setOpacity(0), 100)
-    const t2 = setTimeout(() => setGone(true), 1400)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
-  if (gone) return null
-  return <div style={{ position:'fixed',inset:0,background:'var(--K)',zIndex:9990,opacity,transition:'opacity 1.2s cubic-bezier(.4,0,.2,1)',pointerEvents:'none' }} />
-}
-
-// ─── Progress Bar ─────────────────────────────────────────────────────────────
-function PBar() {
-  const [w, setW] = useState(0)
-  useEffect(() => {
-    const fn = () => {
-      const d = document.documentElement
-      setW(window.scrollY / (d.scrollHeight - window.innerHeight) * 100)
+    /* LOADER */
+    #loader {
+      position: fixed; inset: 0; background: var(--bg); z-index: 9500;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
     }
-    window.addEventListener('scroll', fn, { passive: true })
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
-  return <div id="pb" style={{ width:`${w}%` }} />
-}
-
-// ─── Nav ──────────────────────────────────────────────────────────────────────
-function Nav() {
-  const [scrolled, setScrolled] = useState(false)
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 80)
-    window.addEventListener('scroll', fn, { passive: true }); fn()
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
-  return (
-    <nav style={{
-      position:'fixed',top:0,left:0,right:0,zIndex:5000,height:72,
-      display:'flex',alignItems:'center',justifyContent:'space-between',
-      padding:'0 clamp(24px,5vw,80px)',
-      background: scrolled ? 'rgba(4,4,10,0.95)' : 'transparent',
-      backdropFilter: scrolled ? 'blur(24px)' : 'none',
-      borderBottom: `1px solid ${scrolled ? 'rgba(200,168,92,0.06)' : 'transparent'}`,
-      transition:'background 0.6s,border-color 0.6s',
-    }}>
-      <a href="/" style={{ textDecoration:'none' }}>
-        <div style={{ fontFamily:'var(--H)',fontSize:13,fontWeight:300,letterSpacing:'0.38em',color:'var(--T)',lineHeight:1,textTransform:'uppercase' }}>THE VENTUS</div>
-        <div className="cap" style={{ fontSize:6,letterSpacing:'0.5em',marginTop:4,color:'var(--gold3)' }}>Collection · Seven Coastal Residences</div>
-      </a>
-      <div className="hm" style={{ display:'flex',alignItems:'center',gap:36 }}>
-        {[['Collection','#collection'],['Residences','#villas'],['Estate','#estate'],['Wellness','#wellness'],['Invest','#invest'],['Contact','#contact']].map(([l,h]) => (
-          <a key={l} href={h} className="nl">{l}</a>
-        ))}
-        <a href="#contact" className="btn bl" style={{ fontSize:7,padding:'9px 22px',letterSpacing:'0.3em' }}>Private Enquiry</a>
-      </div>
-    </nav>
-  )
-}
-
-// ─── HERO ─────────────────────────────────────────────────────────────────────
-function Hero() {
-  const [scrollY, setScrollY] = useState(0)
-  useEffect(() => {
-    const fn = () => setScrollY(window.scrollY)
-    window.addEventListener('scroll', fn, { passive:true })
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-  const progress = Math.min(1, scrollY / vh)
-  const imgBlur = progress > 0.45 ? (progress - 0.45) / 0.55 * 20 : 0
-  const imgDark = 0.18 + (progress > 0.45 ? (progress - 0.45) / 0.55 * 0.78 : 0)
-  const textOpacity = Math.max(0, 1 - progress * 2.6)
-
-  return (
-    <section style={{ position:'relative',height:'100dvh',overflow:'hidden' }}>
-      <div style={{ position:'absolute',inset:0 }}>
-        <img src={IMG.hero} alt="The Ventus Collection" style={{
-          width:'100%',height:'100%',objectFit:'cover',objectPosition:'center 25%',
-          filter:`blur(${imgBlur}px)`,
-          transform:`scale(${1.04 + imgBlur*0.006})`,
-          willChange:'filter,transform',
-        }} />
-        <div style={{ position:'absolute',inset:0,background:`rgba(4,4,10,${imgDark})`,transition:'background 0.05s' }} />
-        <div style={{ position:'absolute',inset:0,background:'linear-gradient(to top,rgba(4,4,10,0.95) 0%,rgba(4,4,10,0.1) 50%,transparent 100%)' }} />
-        <div style={{ position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(4,4,10,0.5) 0%,transparent 30%)' }} />
-      </div>
-
-      {/* Collection wordmark — top center */}
-      <div style={{
-        position:'absolute',top:'clamp(92px,14vh,130px)',left:0,right:0,
-        textAlign:'center',
-        opacity: textOpacity,
-        animation:'fadeIn 2s ease 0.3s both',
-      }}>
-        <div className="cap" style={{ fontSize:7,letterSpacing:'0.55em',marginBottom:16,color:'rgba(200,168,92,0.6)' }}>Mauritius · Grand Baie · North Coast</div>
-        <div style={{ fontFamily:'var(--H)',fontSize:'clamp(10px,1.2vw,14px)',fontWeight:300,letterSpacing:'0.55em',color:'rgba(242,237,230,0.35)',textTransform:'uppercase' }}>
-          The Ventus Collection
-        </div>
-      </div>
-
-      <div style={{
-        position:'absolute',
-        bottom:'clamp(80px,10vw,130px)',
-        left:'clamp(48px,7vw,110px)',
-        maxWidth:700,
-        opacity:textOpacity,
-        transform:`translateY(${progress * 28}px)`,
-        pointerEvents: textOpacity > 0.1 ? 'all' : 'none',
-      }}>
-        <div className="cap" style={{ marginBottom:24,fontSize:7.5,animation:'fadeUp 1.2s ease 0.5s both' }}>
-          Seven Private Coastal Residences
-        </div>
-        <h1 style={{
-          fontFamily:'var(--H)',
-          fontSize:'clamp(22px,3.2vw,52px)',
-          fontWeight:300,letterSpacing:'0.18em',textTransform:'uppercase',
-          color:'var(--T)',margin:'0 0 22px',lineHeight:1.4,
-          animation:'fadeUp 1.3s ease 0.7s both',
-        }}>
-          Where wind shapes<br />architecture
-        </h1>
-        <div style={{ width:52,height:1,background:'linear-gradient(90deg,var(--gold),transparent)',marginBottom:26,animation:'slideRight 1.2s ease 0.9s both',transformOrigin:'left' }} />
-        <p style={{
-          fontFamily:'var(--F)',fontSize:'clamp(15px,1.6vw,19px)',fontStyle:'italic',
-          color:'rgba(242,237,230,0.55)',maxWidth:420,lineHeight:1.9,marginBottom:40,
-          animation:'fadeUp 1.2s ease 1.1s both',
-        }}>
-          A designed residential sequence across a single<br />coastal estate. From £1,250,000.
-        </p>
-        <div style={{ display:'flex',gap:14,flexWrap:'wrap',animation:'fadeUp 1.2s ease 1.3s both' }}>
-          <a href="#collection" className="btn bg">Explore The Collection</a>
-          <a href="#contact" className="btn bl">Private Viewing</a>
-        </div>
-      </div>
-
-      {/* Yield badge */}
-      <div style={{
-        position:'absolute',top:90,right:'clamp(28px,5vw,80px)',
-        opacity:textOpacity,
-        borderTop:'1px solid rgba(200,168,92,0.18)',
-        borderBottom:'1px solid rgba(200,168,92,0.18)',
-        padding:'18px 28px',textAlign:'center',
-        background:'rgba(4,4,10,0.55)',backdropFilter:'blur(16px)',
-        animation:'fadeIn 1.2s ease 1.5s both',
-        pointerEvents:'none',
-      }}>
-        <div className="cap" style={{ fontSize:6.5,marginBottom:8,letterSpacing:'0.4em' }}>Est. Gross Yield</div>
-        <div style={{ fontFamily:'var(--F)',fontSize:38,fontWeight:300,lineHeight:1,color:'var(--gold)' }}>9%</div>
-        <div style={{ fontFamily:'var(--F)',fontSize:10,fontStyle:'italic',color:'var(--T3)',marginTop:5,letterSpacing:'0.04em' }}>short-term coastal villa</div>
-      </div>
-
-      {/* Scroll cue */}
-      <div style={{
-        position:'absolute',bottom:38,left:'50%',transform:'translateX(-50%)',
-        display:'flex',flexDirection:'column',alignItems:'center',gap:10,
-        opacity:textOpacity * 0.5,pointerEvents:'none',
-        animation:'fadeIn 1s ease 2.2s both',
-      }}>
-        <div className="cap" style={{ fontSize:6.5,letterSpacing:'0.5em' }}>Descend</div>
-        <div style={{ width:1,height:48,background:'linear-gradient(to bottom,var(--gold),transparent)',animation:'pulse 2.2s ease infinite' }} />
-      </div>
-    </section>
-  )
-}
-
-// ─── Cinematic Scene ──────────────────────────────────────────────────────────
-function Scene({ src, label, caption, sub, objPos='center', id }) {
-  const ref = useRef(null)
-  const [progress, setProgress] = useState(0)
-
-  useEffect(() => {
-    const fn = () => {
-      const el = ref.current; if (!el) return
-      const rect = el.getBoundingClientRect()
-      const p = -rect.top / window.innerHeight
-      setProgress(Math.min(1, Math.max(0, p)))
+    #loader-logo {
+      font-family: var(--serif); font-size: clamp(2.8rem,9vw,5.5rem);
+      font-weight: 300; letter-spacing: .5em; opacity: 0;
     }
-    window.addEventListener('scroll', fn, { passive:true }); fn()
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
+    #loader-bar { width: 100px; height: 1px; background: var(--gold-hair); overflow: hidden; position: relative; }
+    #loader-bar::after {
+      content: ''; position: absolute; inset: 0;
+      background: var(--gold); transform: translateX(-100%);
+      animation: load 1.8s cubic-bezier(.4,0,.2,1) .4s forwards;
+    }
+    @keyframes load { to { transform: translateX(100%); } }
+    #loader-sub {
+      font-size: 9px; letter-spacing: .32em; text-transform: uppercase;
+      color: var(--mute); opacity: 0; animation: fi .6s .9s ease forwards;
+    }
+    @keyframes fi { to { opacity: 1; } }
 
-  const exitBlur = progress > 0.65 ? (progress - 0.65) / 0.35 * 18 : 0
-  const exitDark = progress > 0.65 ? (progress - 0.65) / 0.35 * 0.92 : 0
-  const capOp = progress > 0.08 && progress < 0.6
-    ? Math.min(1, (progress - 0.08) / 0.16, (0.6 - progress) / 0.12)
-    : 0
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 800;
+      padding: 30px 52px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background .5s, padding .4s, border-color .5s;
+      border-bottom: 1px solid transparent;
+    }
+    nav.solid {
+      background: rgba(9,9,7,.93); backdrop-filter: blur(24px);
+      border-color: var(--border); padding: 18px 52px;
+    }
+    .nav-logo { font-family: var(--serif); font-size: 1.45rem; font-weight: 300; letter-spacing: .42em; }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--mid); transition: color .3s; position: relative;
+    }
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: -3px; left: 0;
+      width: 0; height: 1px; background: var(--gold); transition: width .3s;
+    }
+    .nav-links a:hover { color: var(--white); }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta {
+      font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--gold); border: 1px solid var(--gold-hair);
+      padding: 9px 22px; transition: background .3s, border-color .3s;
+    }
+    .nav-cta:hover { background: rgba(201,168,76,.1); border-color: var(--gold); }
 
-  return (
-    <section id={id} ref={ref} style={{ position:'relative',height:'100dvh',overflow:'hidden' }}>
-      <div className="img-wrap" style={{ position:'absolute',inset:0 }}>
-        <img src={src} alt={label ?? ''} loading="lazy" style={{
-          width:'100%',height:'100%',objectFit:'cover',objectPosition:objPos,
-          filter:`blur(${exitBlur}px)`,
-          transform:`scale(${1 + exitBlur*0.006})`,
-          willChange:'filter,transform',
-        }} />
-        <div style={{ position:'absolute',inset:0,background:`rgba(4,4,10,${exitDark})`,pointerEvents:'none' }} />
-        <div style={{ position:'absolute',inset:0,background:'linear-gradient(to top,rgba(4,4,10,0.88) 0%,transparent 45%)',pointerEvents:'none' }} />
-      </div>
-      {label && (
-        <div style={{
-          position:'absolute',bottom:'clamp(60px,8vh,100px)',left:'clamp(48px,7vw,110px)',
-          maxWidth:600,opacity:capOp,
-          transform:`translateY(${(1 - Math.min(1,capOp * 6))*12}px)`,
-          pointerEvents:'none',
-        }}>
-          <div className="cap" style={{ marginBottom:14,fontSize:7.5 }}>{label}</div>
-          {caption && (
-            <p style={{ fontFamily:'var(--F)',fontSize:'clamp(22px,3.2vw,48px)',fontStyle:'italic',fontWeight:300,color:'var(--T)',lineHeight:1.12 }}>
-              {caption}
-            </p>
-          )}
-          {sub && <p style={{ fontFamily:'var(--F)',fontSize:'clamp(13px,1.3vw,16px)',fontStyle:'italic',color:'rgba(242,237,230,0.45)',marginTop:14,lineHeight:1.8 }}>{sub}</p>}
-        </div>
-      )}
-    </section>
-  )
-}
+    /* DOTS */
+    #dots {
+      position: fixed; right: 32px; top: 50%; transform: translateY(-50%);
+      z-index: 700; display: flex; flex-direction: column; gap: 10px;
+    }
+    .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--mute); transition: background .4s, transform .4s; }
+    .dot.on { background: var(--gold); transform: scale(1.5); }
 
-// ─── VENTUS COLLECTION MASTER INTRO ──────────────────────────────────────────
-function VentusIntro() {
-  const { ref, visible } = useInView(0.1)
-  return (
-    <section id="collection" style={{ background:'var(--K)',padding:'clamp(80px,10vw,140px) clamp(48px,7vw,110px)',borderTop:'1px solid var(--BL)' }}>
-      <div ref={ref} style={{
-        maxWidth:900,
-        opacity:visible?1:0,transform:visible?'none':'translateY(20px)',
-        transition:'opacity 1.4s ease,transform 1.4s ease',
-      }}>
-        <div className="cap" style={{ marginBottom:20,fontSize:7,letterSpacing:'0.55em' }}>The Ventus Collection · Grand Baie, Mauritius</div>
-        <h2 style={{ fontFamily:'var(--H)',fontSize:'clamp(28px,4.5vw,72px)',fontWeight:300,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--T)',lineHeight:1.1,marginBottom:28 }}>
-          Seven Private<br />Coastal Residences
-        </h2>
-        <div style={{ width:60,height:1,background:'linear-gradient(90deg,var(--gold),transparent)',marginBottom:30,opacity:0.7 }} />
-        <p style={{ fontFamily:'var(--F)',fontSize:'clamp(16px,1.8vw,22px)',fontStyle:'italic',color:'var(--T2)',lineHeight:1.85,maxWidth:640,marginBottom:20 }}>
-          "Ventus" — wind, movement, and coastal flow. The invisible force shaping architecture, landscape, and experience across a single estate.
-        </p>
-        <p style={{ fontFamily:'var(--F)',fontSize:'clamp(14px,1.4vw,17px)',fontStyle:'italic',color:'var(--T3)',lineHeight:1.9,maxWidth:540 }}>
-          This is not a group of villas. This is a designed residential sequence — seven distinct emotional moments in a single continuous architectural film.
-        </p>
-      </div>
+    /* SHARED */
+    .eyebrow {
+      font-size: 9px; letter-spacing: .36em; text-transform: uppercase; color: var(--gold-dk);
+      display: flex; align-items: center; gap: 14px;
+    }
+    .eyebrow::before { content: ''; display: block; width: 28px; height: 1px; background: currentColor; flex-shrink: 0; }
+    .gold-rule { width: 56px; height: 1px; background: linear-gradient(90deg, var(--gold), transparent); }
+    .rv { opacity: 0; transform: translateY(28px); }
 
-      {/* Ventus I–VII overview strip */}
-      <div className="c7" style={{
-        display:'grid',gridTemplateColumns:'repeat(7,1fr)',
-        marginTop:'clamp(52px,7vw,96px)',
-        borderTop:'1px solid var(--BL)',
-        opacity:visible?1:0,transition:'opacity 1.6s ease 0.3s',
-      }}>
-        {[
-          { n:'I',  name:'Arrival Residence',       note:'Estate entrance sequence' },
-          { n:'II', name:'Elevated Privacy',         note:'Partial ocean framing' },
-          { n:'III',name:'Core Estate',              note:'Architectural symmetry' },
-          { n:'IV', name:'Signature Infinity',       note:'Primary ocean exposure' },
-          { n:'V',  name:'Wellness Adjacent',        note:'Spa integration' },
-          { n:'VI', name:'Panoramic Elevation',      note:'Widest coastal framing' },
-          { n:'VII',name:'Ultra-Private Horizon',    note:'Ultimate exclusivity' },
-        ].map(({ n, name, note }, i) => (
-          <div key={n} style={{
-            padding:'clamp(20px,2.5vw,36px) clamp(12px,1.5vw,20px)',
-            borderRight: i < 6 ? '1px solid var(--BL)' : 'none',
-            opacity:visible?1:0,
-            transform:visible?'none':`translateY(${12 + i*2}px)`,
-            transition:`all 0.9s ease ${0.4 + i*0.06}s`,
-          }}>
-            <div style={{ fontFamily:'var(--H)',fontSize:'clamp(16px,2vw,28px)',fontWeight:300,color:'var(--gold)',lineHeight:1,marginBottom:10,letterSpacing:'0.05em' }}>
-              {n}
-            </div>
-            <div style={{ fontFamily:'var(--B)',fontSize:8,fontWeight:200,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--T2)',marginBottom:6,lineHeight:1.5 }}>{name}</div>
-            <div style={{ fontFamily:'var(--F)',fontSize:11,fontStyle:'italic',color:'var(--T3)',lineHeight:1.6 }}>{note}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
+    /* ══ 1 — HERO ══ */
+    #hero {
+      position: relative; height: 100vh; min-height: 100dvh;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    #hero-img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; transform-origin: center bottom;
+    }
+    #hero-overlay {
+      position: absolute; inset: 0; z-index: 1;
+      background: linear-gradient(180deg, rgba(9,9,7,.45) 0%, rgba(9,9,7,.1) 40%, rgba(9,9,7,.82) 100%);
+    }
+    #hero-dark {
+      position: absolute; inset: 0; z-index: 1;
+      background: #090907; opacity: 0; pointer-events: none;
+    }
+    #hero-content {
+      position: relative; z-index: 2; text-align: center; padding: 0 32px;
+    }
+    #hero-title {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 5.5vw, 4.8rem);
+      font-weight: 300; letter-spacing: .85em;
+      line-height: 1; color: var(--white); margin-bottom: 26px;
+      text-indent: .85em;
+    }
+    #hero-sub {
+      font-size: 9px; letter-spacing: .38em; text-transform: uppercase;
+      color: rgba(201,168,76,.55);
+    }
+    #hero-price {
+      position: absolute; bottom: 52px; left: 56px; z-index: 3; text-align: left;
+    }
+    #hero-price .lbl {
+      font-size: 8px; letter-spacing: .28em; text-transform: uppercase;
+      color: var(--mute); margin-bottom: 4px;
+    }
+    #hero-price .val {
+      font-family: var(--serif); font-size: 1.3rem; font-weight: 300;
+      color: rgba(201,168,76,.6); letter-spacing: .08em;
+    }
+    .btn {
+      font-size: 10px; letter-spacing: .24em; text-transform: uppercase;
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 14px 36px; border: 1px solid var(--gold-hair);
+      color: var(--white); transition: color .4s, border-color .4s;
+      position: relative; overflow: hidden; cursor: none;
+    }
+    .btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--gold); transform: translateX(-101%);
+      transition: transform .4s cubic-bezier(.4,0,.2,1);
+    }
+    .btn:hover { color: var(--bg); border-color: var(--gold); }
+    .btn:hover::before { transform: translateX(0); }
+    .btn span { position: relative; z-index: 1; }
+    .btn-ghost { border-color: rgba(255,255,255,.2); color: var(--mid); }
+    .btn-ghost:hover { border-color: var(--gold); }
+    #hero-yield {
+      position: absolute; bottom: 48px; right: 52px; z-index: 3; text-align: right;
+    }
+    #hero-yield .val { font-family: var(--serif); font-size: 1.8rem; font-weight: 300; color: rgba(201,168,76,.55); letter-spacing: .06em; }
+    #hero-yield .lbl { font-size: 8px; letter-spacing: .26em; text-transform: uppercase; color: var(--mute); margin-top: 4px; }
+    #scroll-hint {
+      position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%);
+      z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    #scroll-hint span { font-size: 8px; letter-spacing: .3em; text-transform: uppercase; color: var(--mute); }
+    .scroll-line {
+      width: 1px; height: 44px;
+      background: linear-gradient(to bottom, var(--gold), transparent);
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: .3; transform: scaleY(.5); transform-origin: top; }
+      50% { opacity: .9; transform: scaleY(1); transform-origin: top; }
+    }
 
-// ─── Specs Bar ────────────────────────────────────────────────────────────────
-function Specs() {
-  const { ref, visible } = useInView()
-  const items = [
-    { v:'7',      l:'Private Residences' },
-    { v:'5',      l:'Max Bedrooms' },
-    { v:'820m²',  l:'Max Interior' },
-    { v:'9%',     l:'Gross Yield' },
-    { v:'0%',     l:'Capital Gains Tax' },
-    { v:'£1.25M', l:'From' },
-  ]
-  return (
-    <div ref={ref} className="c6" style={{ display:'grid',gridTemplateColumns:'repeat(6,1fr)',borderTop:'1px solid var(--BL)',borderBottom:'1px solid var(--BL)',background:'var(--K)' }}>
-      {items.map(({ v, l }, i) => (
-        <div key={l} style={{
-          padding:'clamp(30px,4vw,58px) clamp(16px,2.5vw,32px)',
-          borderLeft:i>0?'1px solid var(--BL)':'none',
-          opacity:visible?1:0,transform:visible?'none':'translateY(14px)',
-          transition:`all 0.9s ease ${i*0.08}s`,
-        }}>
-          <div style={{ fontFamily:'var(--F)',fontSize:'clamp(20px,2.8vw,44px)',fontWeight:300,fontStyle:'italic',color:'var(--gold)',lineHeight:1,marginBottom:10 }}>{v}</div>
-          <div className="cap" style={{ fontSize:7.5,color:'var(--T3)' }}>{l}</div>
-        </div>
-      ))}
+    /* ══ 2 — CINEMATIC CHAPTERS ══ */
+    .chapter {
+      position: relative; height: 100vh; min-height: 600px;
+      display: flex; align-items: flex-end; overflow: hidden;
+    }
+    .chapter-img {
+      position: absolute; inset: 0; width: 100%; height: 112%;
+      object-fit: cover; top: -6%; will-change: transform;
+    }
+    .chapter-scrim {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(9,9,7,.08) 0%, rgba(9,9,7,.2) 55%, rgba(9,9,7,.85) 100%);
+    }
+    .chapter-body { position: relative; z-index: 2; padding: 0 80px 64px; max-width: 900px; }
+    .chapter-index {
+      font-family: var(--serif); font-size: 6rem; font-weight: 300;
+      color: rgba(201,168,76,.1); letter-spacing: -.02em; line-height: 1; margin-bottom: -14px;
+    }
+    .chapter-label { font-size: 9px; letter-spacing: .36em; text-transform: uppercase; color: var(--gold); margin-bottom: 18px; }
+    .chapter-title {
+      font-family: var(--serif); font-size: clamp(2rem,5vw,3.8rem);
+      font-weight: 300; font-style: italic; line-height: 1.15; color: var(--white); max-width: 22ch;
+    }
+
+    /* ══ 3 — STATS STRIP ══ */
+    #stats {
+      background: var(--s1); border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border); padding: 72px 80px;
+    }
+    #stats-inner { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: repeat(6,1fr); }
+    .stat { padding: 0 40px; text-align: center; border-right: 1px solid var(--border); }
+    .stat:first-child { padding-left: 0; }
+    .stat:last-child  { padding-right: 0; border-right: none; }
+    .stat-n {
+      font-family: var(--serif); font-size: clamp(2.2rem,4vw,3.4rem);
+      font-weight: 300; color: var(--white); letter-spacing: .02em; line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-n .sup { font-size: 1.1rem; color: var(--gold); vertical-align: super; }
+    .stat-l { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: var(--mute); margin-top: 10px; }
+
+    /* ══ 4 — ALTERNATING FEATURES ══ */
+    .feature { display: grid; grid-template-columns: 1fr 1fr; min-height: 80vh; }
+    .feature.flip { direction: rtl; }
+    .feature.flip > * { direction: ltr; }
+    .feat-img { position: relative; overflow: hidden; min-height: 540px; }
+    .feat-img img {
+      position: absolute; inset: 0; width: 100%; height: 112%;
+      object-fit: cover; top: -6%; will-change: transform;
+    }
+    .feat-img::after { content: ''; position: absolute; inset: 0; background: rgba(9,9,7,.18); }
+    .feat-text { background: var(--s1); display: flex; align-items: center; padding: 100px 80px; }
+    .feat-text-inner { max-width: 520px; }
+    .feat-text-inner h2 {
+      font-family: var(--serif); font-size: clamp(2.2rem,4vw,3.6rem);
+      font-weight: 300; line-height: 1.1; letter-spacing: .02em; margin: 20px 0 28px;
+    }
+    .feat-text-inner h2 em { font-style: italic; color: var(--gold-lt); }
+    .feat-text-inner p { font-size: .85rem; line-height: 1.95; color: var(--mid); max-width: 50ch; }
+    .feat-text-inner p + p { margin-top: 16px; }
+
+    /* ══ 5 — LP INTERLUDE ══ */
+    #lp-interlude {
+      position: relative; height: 60vh; min-height: 400px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #lp-interlude img {
+      position: absolute; inset: 0; width: 100%; height: 120%;
+      object-fit: cover; top: -10%; will-change: transform;
+    }
+    #lp-interlude::after { content: ''; position: absolute; inset: 0; background: rgba(9,9,7,.55); }
+    #lp-interlude-text { position: relative; z-index: 2; text-align: center; }
+    #lp-interlude-text p {
+      font-family: var(--serif); font-size: clamp(1rem,2vw,1.2rem);
+      letter-spacing: .14em; color: var(--mid); text-transform: uppercase; margin-bottom: 20px;
+    }
+    #lp-interlude-text h2 {
+      font-family: var(--serif); font-size: clamp(2.2rem,5vw,4.2rem);
+      font-weight: 300; font-style: italic; color: var(--white); letter-spacing: .04em;
+    }
+
+    /* ══ 6 — SEVEN VILLAS ══ */
+    #villas { background: var(--bg); padding: 140px 80px; }
+    #villas-header {
+      max-width: 1360px; margin: 0 auto 80px;
+      display: flex; align-items: flex-end; justify-content: space-between;
+    }
+    #villas-header h2 {
+      font-family: var(--serif); font-size: clamp(2.4rem,5vw,4rem);
+      font-weight: 300; line-height: 1.05; margin-top: 18px; max-width: 18ch;
+    }
+    #villas-header h2 em { font-style: italic; color: var(--gold-lt); }
+    .villas-price { text-align: right; }
+    .villas-price .from { font-size: 9px; letter-spacing: .26em; text-transform: uppercase; color: var(--mute); }
+    .villas-price .amount {
+      font-family: var(--serif); font-size: 2.4rem; font-weight: 300;
+      color: var(--gold); letter-spacing: .06em; margin-top: 6px;
+    }
+    #villas-list { max-width: 1360px; margin: 0 auto; display: flex; flex-direction: column; gap: 2px; }
+    .villa-row {
+      display: grid; grid-template-columns: 80px 1fr 1fr auto auto auto;
+      align-items: center; gap: 32px; padding: 28px 40px;
+      background: var(--s1); border: 1px solid transparent; cursor: none;
+      transition: background .35s, border-color .35s, padding-left .35s;
+    }
+    .villa-row:hover { background: var(--s2); border-color: var(--border); padding-left: 52px; }
+    .villa-row-num { font-family: var(--serif); font-size: 2rem; font-weight: 300; color: var(--gold); letter-spacing: .06em; }
+    .villa-row-name { font-family: var(--serif); font-size: 1.3rem; font-weight: 300; font-style: italic; letter-spacing: .06em; }
+    .villa-row-loc { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--mute); }
+    .villa-row-tag { font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--mute); border: 1px solid var(--border); padding: 5px 12px; white-space: nowrap; }
+    .villa-row-price { font-family: var(--serif); font-size: 1.1rem; font-weight: 300; color: var(--mid); text-align: right; white-space: nowrap; letter-spacing: .04em; }
+    .villa-row-cta { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold-dk); display: flex; align-items: center; gap: 8px; white-space: nowrap; transition: color .3s, gap .3s; }
+    .villa-row:hover .villa-row-cta { color: var(--gold); gap: 14px; }
+    .villa-row-cta::after { content: '→'; font-size: 12px; }
+
+    /* ══ GARAGE (with villas) ══ */
+    #garage-interlude {
+      position: relative; height: 72vh; min-height: 480px; overflow: hidden;
+      display: flex; align-items: flex-end;
+    }
+    #garage-interlude img {
+      position: absolute; inset: 0; width: 100%; height: 122%;
+      object-fit: cover; top: -11%; will-change: transform;
+    }
+    #garage-interlude::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(9,9,7,.05) 0%, rgba(9,9,7,.3) 50%, rgba(9,9,7,.88) 100%);
+    }
+    #garage-text { position: relative; z-index: 2; padding: 0 80px 72px; }
+    #garage-text p { font-size: 9px; letter-spacing: .38em; text-transform: uppercase; color: var(--gold-dk); margin-bottom: 18px; }
+    #garage-text h2 {
+      font-family: var(--serif); font-size: clamp(2rem,5vw,4.2rem);
+      font-weight: 300; font-style: italic; color: var(--white); max-width: 18ch;
+    }
+
+    /* ══ 7 — PULLQUOTE ══ */
+    .pullquote {
+      position: relative; height: 70vh; min-height: 480px;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .pullquote-img {
+      position: absolute; inset: 0; width: 100%; height: 120%;
+      object-fit: cover; top: -10%; will-change: transform;
+    }
+    .pullquote::after { content: ''; position: absolute; inset: 0; background: rgba(9,9,7,.62); }
+    .pullquote-body { position: relative; z-index: 2; text-align: center; padding: 0 48px; }
+    .pullquote-body blockquote {
+      font-family: var(--serif); font-size: clamp(1.8rem,4vw,3.2rem);
+      font-weight: 300; font-style: italic; line-height: 1.4; color: var(--white); max-width: 800px;
+    }
+    .pullquote-body cite {
+      display: block; margin-top: 28px; font-style: normal;
+      font-size: 9px; letter-spacing: .34em; text-transform: uppercase; color: var(--gold-dk);
+    }
+
+    /* ══ 8 — SETTING ══ */
+    #setting { background: var(--s1); padding: 140px 80px; }
+    #setting-inner { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 120px; align-items: center; }
+    #setting h2 { font-family: var(--serif); font-size: clamp(2.2rem,4.5vw,3.8rem); font-weight: 300; line-height: 1.1; margin: 20px 0 28px; }
+    #setting h2 em { font-style: italic; color: var(--gold-lt); }
+    #setting p { font-size: .85rem; line-height: 1.95; color: var(--mid); max-width: 50ch; }
+    #setting p + p { margin-top: 16px; }
+    .setting-callouts { display: flex; flex-direction: column; margin-top: 48px; padding-top: 40px; border-top: 1px solid var(--border); }
+    .setting-callout { display: flex; align-items: baseline; gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--border); }
+    .setting-callout:last-child { border-bottom: none; }
+    .setting-callout-n { font-family: var(--serif); font-size: 2.2rem; font-weight: 300; color: var(--gold); flex-shrink: 0; width: 110px; }
+    .setting-callout-l { font-size: .8rem; line-height: 1.6; color: var(--mid); }
+    #setting-right { position: relative; }
+    .setting-img-main { position: relative; aspect-ratio: 3/4; overflow: hidden; max-height: 620px; }
+    .setting-img-main img { width: 100%; height: 100%; object-fit: cover; transition: transform 5s ease; }
+    .setting-img-main:hover img { transform: scale(1.04); }
+    .setting-img-main::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, rgba(9,9,7,.6) 100%); }
+    .setting-img-accent { position: absolute; bottom: -28px; left: -28px; width: 130px; height: 130px; border: 1px solid var(--border-hi); z-index: -1; }
+    .setting-map img { filter: grayscale(60%) contrast(1.15) brightness(.75) sepia(20%); transition: filter 5s ease; }
+    .setting-map:hover img { filter: grayscale(40%) contrast(1.1) brightness(.8) sepia(15%); }
+    .setting-map::after { background: linear-gradient(180deg, rgba(9,9,7,.35) 0%, rgba(9,9,7,.55) 100%); }
+    .map-overlay {
+      position: absolute; bottom: 28px; left: 28px; z-index: 2;
+      border-left: 1px solid var(--gold-hair); padding-left: 16px;
+    }
+    .map-coord { font-size: 8px; letter-spacing: .22em; color: var(--gold-dk); text-transform: uppercase; margin-bottom: 5px; }
+    .map-label { font-family: var(--serif); font-size: 1.1rem; font-weight: 300; color: var(--white); font-style: italic; }
+
+    /* ══ 9 — WELLNESS ══ */
+    #wellness { background: var(--bg); padding: 140px 0; }
+    #wellness-head { max-width: 1360px; margin: 0 auto 80px; padding: 0 80px; display: flex; align-items: flex-end; justify-content: space-between; }
+    #wellness-head h2 { font-family: var(--serif); font-size: clamp(2.4rem,5vw,4rem); font-weight: 300; line-height: 1.05; margin-top: 18px; max-width: 16ch; }
+    #wellness-head h2 em { font-style: italic; color: var(--gold-lt); }
+    #wellness-head p { font-size: .85rem; line-height: 1.9; color: var(--mid); max-width: 40ch; text-align: right; }
+    .spa-chapter { display: grid; grid-template-columns: 1fr 1fr; min-height: 70vh; }
+    .spa-chapter.flip { direction: rtl; }
+    .spa-chapter.flip > * { direction: ltr; }
+    .spa-chapter-img { position: relative; min-height: 500px; overflow: hidden; }
+    .spa-chapter-img img {
+      position: absolute; inset: 0; width: 100%; height: 112%;
+      object-fit: cover; top: -6%; will-change: transform;
+    }
+    .spa-chapter-img::after { content: ''; position: absolute; inset: 0; background: rgba(9,9,7,.15); }
+    .spa-chapter-body { background: var(--s1); display: flex; align-items: center; padding: 80px; }
+    .spa-chapter-body-inner { max-width: 480px; }
+    .spa-chapter-body-inner h3 { font-family: var(--serif); font-size: clamp(1.8rem,3.5vw,3rem); font-weight: 300; line-height: 1.1; margin: 18px 0 22px; }
+    .spa-chapter-body-inner h3 em { font-style: italic; color: var(--gold-lt); }
+    .spa-chapter-body-inner p { font-size: .83rem; line-height: 1.95; color: var(--mid); max-width: 48ch; }
+    .spa-chapter-body-inner p + p { margin-top: 14px; }
+    #spa-amenities { max-width: 1360px; margin: 80px auto 0; padding: 0 80px; display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid var(--border); }
+    .spa-am-cell { padding: 48px 36px; border-right: 1px solid var(--border); position: relative; }
+    .spa-am-cell:last-child { border-right: none; }
+    .spa-am-cell::before { content: ''; position: absolute; top: 0; left: 36px; width: 32px; height: 1px; background: var(--gold); }
+    .spa-am-title { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--white); margin-bottom: 14px; }
+    .spa-am-items { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .spa-am-items li { font-size: .78rem; color: var(--mute); line-height: 1.5; }
+
+    /* ══ 10 — DINING ══ */
+    #dining { background: var(--bg); }
+    #dining-header { max-width: 1360px; margin: 0 auto; padding: 120px 80px 80px; display: flex; align-items: flex-end; justify-content: space-between; gap: 60px; }
+    #dining-header h2 { font-family: var(--serif); font-size: clamp(2.4rem,5vw,4rem); font-weight: 300; line-height: 1.05; margin-top: 18px; max-width: 20ch; }
+    #dining-header h2 em { font-style: italic; color: var(--gold-lt); }
+    #dining-header p { font-size: .85rem; line-height: 1.9; color: var(--mid); max-width: 44ch; text-align: right; }
+    .dining-panel { display: grid; grid-template-columns: 1fr 1fr; min-height: 75vh; }
+    .dining-panel.flip { direction: rtl; }
+    .dining-panel.flip > * { direction: ltr; }
+    .dining-panel-img { position: relative; min-height: 540px; overflow: hidden; }
+    .dining-panel-img img { position: absolute; inset: 0; width: 100%; height: 112%; object-fit: cover; top: -6%; will-change: transform; }
+    .dining-panel-img::after { content: ''; position: absolute; inset: 0; background: rgba(9,9,7,.2); }
+    .dining-panel-body { background: var(--s2); display: flex; align-items: center; padding: 100px 80px; }
+    .dining-panel-inner { max-width: 500px; }
+    .dining-panel-inner h3 { font-family: var(--serif); font-size: clamp(2rem,3.8vw,3.2rem); font-weight: 300; line-height: 1.1; margin: 18px 0 26px; }
+    .dining-panel-inner h3 em { font-style: italic; color: var(--gold-lt); }
+    .dining-panel-inner p { font-size: .84rem; line-height: 1.95; color: var(--mid); max-width: 48ch; }
+    .dining-panel-inner p + p { margin-top: 14px; }
+    .dining-tags { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+    .dining-tag { font-size: 8px; letter-spacing: .2em; text-transform: uppercase; border: 1px solid var(--border); color: var(--mute); padding: 6px 14px; }
+
+    /* Rooftop interlude */
+    #rooftop-interlude {
+      position: relative; height: 85vh; min-height: 560px;
+      overflow: hidden; display: flex; align-items: flex-end;
+    }
+    #rooftop-interlude img { position: absolute; inset: 0; width: 100%; height: 122%; object-fit: cover; top: -11%; will-change: transform; }
+    #rooftop-interlude::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(9,9,7,.08) 0%, rgba(9,9,7,.25) 55%, rgba(9,9,7,.9) 100%);
+    }
+    #rooftop-body { position: relative; z-index: 2; padding: 0 80px 80px; max-width: 800px; }
+    #rooftop-body .eyebrow { margin-bottom: 24px; }
+    #rooftop-body h2 { font-family: var(--serif); font-size: clamp(2.2rem,5vw,4.4rem); font-weight: 300; font-style: italic; color: var(--white); line-height: 1.1; margin-bottom: 22px; }
+    #rooftop-body .desc { font-size: .84rem; color: var(--mid); line-height: 1.9; max-width: 52ch; }
+
+    /* ══ 11 — MARKET INTELLIGENCE ══ */
+    #invest { background: var(--s1); padding: 140px 80px; }
+    #invest-inner { max-width: 1360px; margin: 0 auto; }
+    #invest-header { display: grid; grid-template-columns: 1fr 1fr; gap: 100px; margin-bottom: 90px; align-items: end; }
+    #invest-header h2 { font-family: var(--serif); font-size: clamp(2.4rem,4.5vw,3.8rem); font-weight: 300; line-height: 1.1; margin-top: 20px; }
+    #invest-header h2 em { font-style: italic; color: var(--gold-lt); }
+    #invest-header p { font-size: .85rem; line-height: 1.9; color: var(--mid); max-width: 50ch; }
+
+    /* Big stats */
+    #invest-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 2px; }
+    .im-cell { background: var(--s1); padding: 52px 44px; position: relative; transition: background .3s; }
+    .im-cell:hover { background: var(--s2); }
+    .im-cell-l { font-size: 9px; letter-spacing: .28em; text-transform: uppercase; color: var(--gold-dk); margin-bottom: 18px; }
+    .im-cell-v { font-family: var(--serif); font-size: clamp(2.4rem,4vw,3.6rem); font-weight: 300; color: var(--white); letter-spacing: .02em; line-height: 1; font-variant-numeric: tabular-nums; }
+    .im-cell-v .u { font-size: 1.2rem; color: var(--gold); }
+    .im-cell-d { font-size: .76rem; line-height: 1.8; color: var(--mute); margin-top: 14px; }
+    .im-cell-bar { position: absolute; bottom: 0; left: 44px; height: 2px; background: linear-gradient(90deg, var(--gold), transparent); width: 0; transition: width 1.4s ease; }
+    .im-cell.in .im-cell-bar { width: calc(100% - 88px); }
+
+    /* Infograph row */
+    #invest-infograph { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 80px; }
+    .ig-cell { background: var(--s2); padding: 52px 44px; position: relative; overflow: hidden; }
+    .ig-cell::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, var(--gold-dk), transparent); }
+    .ig-eyebrow { font-size: 8px; letter-spacing: .3em; text-transform: uppercase; color: var(--gold-dk); margin-bottom: 24px; }
+    .ig-number {
+      font-family: var(--serif); font-size: clamp(3rem,5vw,5rem);
+      font-weight: 300; color: var(--white); line-height: 1; letter-spacing: .02em; margin-bottom: 12px;
+    }
+    .ig-number .u { font-size: 1.8rem; color: var(--gold); }
+    .ig-label { font-size: .78rem; color: var(--mid); line-height: 1.8; max-width: 30ch; }
+    /* Animated ring */
+    .ig-ring { position: absolute; bottom: 36px; right: 44px; }
+    .ig-ring svg { width: 60px; height: 60px; transform: rotate(-90deg); }
+    .ring-track { fill: none; stroke: var(--border); stroke-width: 1.5; }
+    .ring-fill { fill: none; stroke: var(--gold); stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 163; stroke-dashoffset: 163; transition: stroke-dashoffset 2s cubic-bezier(.4,0,.2,1); }
+    .ig-cell.in .ring-fill { stroke-dashoffset: 0; }
+
+    /* RPPI chart */
+    #rppi-wrap { padding: 56px 56px 48px; background: var(--s2); border: 1px solid var(--border); }
+    #rppi-wrap h3 { font-family: var(--serif); font-size: 1.5rem; font-weight: 300; letter-spacing: .08em; margin-bottom: 6px; }
+    #rppi-sub { font-size: .75rem; color: var(--mute); letter-spacing: .1em; margin-bottom: 44px; }
+    #rppi-bars { display: grid; grid-template-columns: repeat(8,1fr); gap: 12px; align-items: flex-end; height: 200px; }
+    .rppi-col { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+    .rppi-val { font-family: var(--serif); font-size: .85rem; color: var(--gold); font-variant-numeric: tabular-nums; }
+    .rppi-bar { width: 100%; height: 0; background: linear-gradient(to top, var(--gold-dk), var(--gold)); transition: height 1.4s cubic-bezier(.4,0,.2,1); position: relative; }
+    .rppi-bar.peak { background: linear-gradient(to top, var(--gold-dk), var(--gold-lt)); box-shadow: 0 0 20px rgba(201,168,76,.3); }
+    .rppi-yr { font-size: 8px; letter-spacing: .14em; color: var(--mute); text-align: center; }
+
+    /* Reasons */
+    #invest-reasons { display: grid; grid-template-columns: repeat(5,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-top: 80px; }
+    .ir-cell { background: var(--s1); padding: 44px 32px; transition: background .3s; }
+    .ir-cell:hover { background: var(--s2); }
+    .ir-cell-head { font-size: 9px; letter-spacing: .24em; text-transform: uppercase; color: var(--gold-dk); margin-bottom: 14px; }
+    .ir-cell-title { font-family: var(--serif); font-size: 1.15rem; font-weight: 300; line-height: 1.3; margin-bottom: 12px; color: var(--white); letter-spacing: .04em; }
+    .ir-cell-title em { font-style: italic; color: var(--gold-lt); }
+    .ir-cell-body { font-size: .75rem; line-height: 1.85; color: var(--mute); }
+
+    /* Deadline */
+    #deadline { background: linear-gradient(90deg, rgba(201,168,76,.08), rgba(201,168,76,.04)); border: 1px solid var(--border-hi); padding: 36px 56px; margin-top: 56px; display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+    #deadline-left h4 { font-family: var(--serif); font-size: 1.4rem; font-weight: 300; letter-spacing: .06em; margin-bottom: 8px; }
+    #deadline-left h4 em { font-style: italic; color: var(--gold); }
+    #deadline-left p { font-size: .78rem; color: var(--mid); line-height: 1.7; }
+    .deadline-arrow { font-size: 9px; letter-spacing: .26em; text-transform: uppercase; color: var(--gold); border: 1px solid var(--border-hi); padding: 13px 28px; white-space: nowrap; transition: background .3s; cursor: none; }
+    .deadline-arrow:hover { background: rgba(201,168,76,.1); }
+
+    /* ══ 12 — VEFA ══ */
+    #vefa { background: var(--bg); padding: 140px 80px; }
+    #vefa-inner { max-width: 1360px; margin: 0 auto; }
+    #vefa-header { margin-bottom: 72px; }
+    #vefa-header h2 { font-family: var(--serif); font-size: clamp(2.4rem,5vw,4rem); font-weight: 300; line-height: 1.05; margin: 18px 0 28px; max-width: 26ch; }
+    #vefa-header h2 em { font-style: italic; color: var(--gold-lt); }
+    #vefa-header p { font-size: .85rem; line-height: 1.9; color: var(--mid); max-width: 62ch; }
+
+    #vefa-timeline { display: grid; grid-template-columns: repeat(5,1fr); gap: 2px; position: relative; }
+    #vefa-timeline::before { content: ''; position: absolute; top: 44px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--gold), rgba(201,168,76,.08)); z-index: 1; }
+    .vefa-step { background: var(--s1); padding: 60px 32px 44px; position: relative; }
+    .vefa-step-dot { width: 11px; height: 11px; border-radius: 50%; border: 1px solid var(--gold-dk); background: var(--bg); margin-bottom: 28px; position: relative; z-index: 2; transition: background .4s, box-shadow .4s; }
+    .vefa-step.lit .vefa-step-dot { background: var(--gold); box-shadow: 0 0 18px rgba(201,168,76,.45); }
+    .vefa-step-ghost { font-family: var(--serif); font-size: 4rem; font-weight: 300; color: rgba(201,168,76,.08); letter-spacing: -.02em; line-height: 1; margin-bottom: -8px; }
+    .vefa-step-pct { font-family: var(--serif); font-size: 2rem; font-weight: 300; color: var(--gold); letter-spacing: .04em; margin-bottom: 14px; }
+    .vefa-step-label { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--white); margin-bottom: 12px; }
+    .vefa-step-body { font-size: .75rem; color: var(--mute); line-height: 1.8; }
+    .vefa-step-guar { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold-dk); }
+    .vefa-step-guar::before { content: ''; width: 18px; height: 1px; background: currentColor; }
+
+    #vefa-guarantees { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; margin-top: 2px; }
+    .vg-cell { background: var(--s2); padding: 44px 40px; position: relative; border-top: 1px solid var(--border); overflow: hidden; }
+    .vg-cell::after { content: ''; position: absolute; top: 0; left: 0; width: 0; height: 2px; background: var(--gold); transition: width 1.4s ease; }
+    .vg-cell.in::after { width: 100%; }
+    .vg-icon { font-family: var(--serif); font-size: 3rem; color: rgba(201,168,76,.22); margin-bottom: 18px; line-height: 1; }
+    .vg-title { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--white); margin-bottom: 12px; }
+    .vg-body { font-size: .78rem; color: var(--mute); line-height: 1.85; }
+
+    /* ══ 13 — CONTACT ══ */
+    #contact { background: var(--bg); padding: 140px 80px; }
+    #contact-inner { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 120px; align-items: start; }
+    #contact h2 { font-family: var(--serif); font-size: clamp(2.6rem,5vw,4.4rem); font-weight: 300; line-height: 1.05; margin: 20px 0 28px; }
+    #contact h2 em { font-style: italic; color: var(--gold-lt); }
+    #contact-left > p { font-size: .85rem; line-height: 1.9; color: var(--mid); max-width: 50ch; margin-bottom: 40px; }
+    .contact-details { display: flex; flex-direction: column; gap: 20px; margin-bottom: 40px; }
+    .cd-label { font-size: 9px; letter-spacing: .28em; text-transform: uppercase; color: var(--gold-dk); margin-bottom: 5px; }
+    .cd-val { font-size: .85rem; color: var(--mid); }
+    .form { display: flex; flex-direction: column; gap: 18px; }
+    .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .ff { display: flex; flex-direction: column; gap: 7px; }
+    .ff.full { grid-column: 1/-1; }
+    .fl { font-size: 9px; letter-spacing: .26em; text-transform: uppercase; color: var(--gold-dk); }
+    .fi, .fsel, .fta { background: transparent; border: none; border-bottom: 1px solid rgba(201,168,76,.2); padding: 11px 0; font-size: .82rem; font-family: var(--sans); color: var(--white); outline: none; appearance: none; transition: border-color .3s; }
+    .fi:focus, .fsel:focus, .fta:focus { border-color: var(--gold); }
+    .fi::placeholder, .fta::placeholder { color: var(--mute); font-size: .75rem; }
+    .fsel option { background: var(--s1); }
+    .fta { resize: none; min-height: 90px; }
+
+    /* ══ FOOTER ══ */
+    footer { background: var(--s1); border-top: 1px solid var(--border); padding: 72px 80px 48px; }
+    .footer-grid { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 60px; padding-bottom: 56px; border-bottom: 1px solid var(--border); }
+    .footer-brand-name { font-family: var(--serif); font-size: 1.7rem; font-weight: 300; letter-spacing: .42em; margin-bottom: 18px; }
+    .footer-brand-p { font-size: .75rem; line-height: 1.8; color: var(--mute); max-width: 30ch; }
+    .footer-col-head { font-size: 9px; letter-spacing: .26em; text-transform: uppercase; color: var(--gold-dk); margin-bottom: 22px; }
+    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 11px; }
+    .footer-links a { font-size: .76rem; color: var(--mute); transition: color .3s; }
+    .footer-links a:hover { color: var(--white); }
+    .footer-bottom { max-width: 1360px; margin: 36px auto 0; display: flex; align-items: center; justify-content: space-between; }
+    .footer-copy { font-size: .7rem; color: var(--mute); letter-spacing: .08em; }
+    .footer-legal-links { display: flex; gap: 28px; }
+    .footer-legal-links a { font-size: .7rem; color: var(--mute); transition: color .3s; }
+    .footer-legal-links a:hover { color: var(--mid); }
+
+    /* ══ RESPONSIVE ══ */
+    @media (max-width: 1100px) {
+      nav { padding: 24px 36px; } nav.solid { padding: 16px 36px; }
+      .nav-links { display: none; }
+      #stats-inner { grid-template-columns: repeat(3,1fr); }
+      .stat:nth-child(3) { border-right: none; }
+      .feature, .spa-chapter, .dining-panel { grid-template-columns: 1fr; }
+      .feature.flip, .spa-chapter.flip, .dining-panel.flip { direction: ltr; }
+      .feat-img, .spa-chapter-img, .dining-panel-img { min-height: 50vw; }
+      #villas { padding: 100px 36px; }
+      #villas-header { flex-direction: column; align-items: flex-start; gap: 24px; }
+      .villa-row { grid-template-columns: 56px 1fr auto; gap: 16px; padding: 20px 24px; }
+      .villa-row-loc, .villa-row-tag { display: none; }
+      #invest-metrics { grid-template-columns: 1fr 1fr; }
+      #invest-infograph { grid-template-columns: 1fr; }
+      #invest-reasons { grid-template-columns: 1fr 1fr; }
+      #invest-header, #setting-inner, #contact-inner { grid-template-columns: 1fr; }
+      #wellness-head { flex-direction: column; align-items: flex-start; gap: 24px; }
+      #wellness-head p { text-align: left; }
+      #spa-amenities { grid-template-columns: 1fr 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      #dots { display: none; }
+      #vefa-timeline { grid-template-columns: 1fr 1fr; }
+      #vefa-guarantees { grid-template-columns: 1fr; }
+      #dining-header { flex-direction: column; gap: 24px; }
+      #dining-header p { text-align: left; }
+    }
+    @media (max-width: 700px) {
+      .chapter-body { padding: 0 28px 48px; }
+      #hero-yield { display: none; }
+      #stats-inner { grid-template-columns: 1fr 1fr; }
+      .stat:nth-child(2) { border-right: none; }
+      #invest-metrics, #invest-reasons { grid-template-columns: 1fr; }
+      .frow { grid-template-columns: 1fr; }
+      #spa-amenities { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr; }
+      #rppi-bars { grid-template-columns: repeat(4,1fr); }
+      #vefa-timeline { grid-template-columns: 1fr; }
+      #vefa-timeline::before { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="cur"></div>
+  <div id="cur-ring"></div>
+
+  <!-- LOADER -->
+  <div id="loader">
+    <div id="loader-logo">VENTUS</div>
+    <div id="loader-bar"></div>
+    <div id="loader-sub">East Coast &middot; Mauritius &middot; Indian Ocean</div>
+  </div>
+
+  <!-- NAV -->
+  <nav id="nav">
+    <div class="nav-logo">VENTUS</div>
+    <ul class="nav-links">
+      <li><a href="#villas">Villas</a></li>
+      <li><a href="#setting">Estate</a></li>
+      <li><a href="#wellness">Wellness</a></li>
+      <li><a href="#dining">Dining</a></li>
+      <li><a href="#invest">Invest</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <a href="#contact" class="nav-cta">Private Enquiry</a>
+  </nav>
+
+  <!-- DOTS -->
+  <div id="dots">
+    <div class="dot on"  data-s="hero"></div>
+    <div class="dot"     data-s="chapters"></div>
+    <div class="dot"     data-s="villas"></div>
+    <div class="dot"     data-s="wellness"></div>
+    <div class="dot"     data-s="dining"></div>
+    <div class="dot"     data-s="invest"></div>
+    <div class="dot"     data-s="contact"></div>
+  </div>
+
+  <!-- ══ HERO ══ -->
+  <section id="hero">
+    <img id="hero-img"
+      src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/descent.jpg"
+      alt="Ventus — Descent, East Coast Mauritius"
+    />
+    <div id="hero-overlay"></div>
+    <div id="hero-dark"></div>
+    <div id="hero-content">
+      <h1 id="hero-title">VENTUS</h1>
+      <p id="hero-sub">Mauritius &middot; Indian Ocean</p>
     </div>
-  )
-}
+    <div id="hero-price">
+      <div class="lbl">From</div>
+      <div class="val">£1,250,000</div>
+    </div>
+    <div id="hero-yield">
+      <div class="val">9%</div>
+      <div class="lbl">Est. Gross Yield</div>
+    </div>
+    <div id="scroll-hint">
+      <div class="scroll-line"></div>
+      <span>Descend</span>
+    </div>
+  </section>
 
-// ─── Panel ────────────────────────────────────────────────────────────────────
-function Panel({ src, eyebrow, title, sub, align='left', objPos='center', dim=0.45, id }) {
-  const { ref, visible } = useInView(0.08)
-  const a = align === 'center' ? { textAlign:'center', left:0, right:0 }
-           : align === 'right'  ? { textAlign:'right', right:'clamp(48px,7vw,110px)' }
-           :                       { left:'clamp(48px,7vw,110px)' }
-  return (
-    <section id={id} style={{ position:'relative',height:'100dvh',overflow:'hidden',display:'flex',flexDirection:'column',justifyContent:'flex-end' }}>
-      <div className="img-wrap" style={{ position:'absolute',inset:0 }}>
-        <img src={src} alt={title} loading="lazy" style={{ width:'100%',height:'100%',objectFit:'cover',objectPosition:objPos }} />
-        <div style={{ position:'absolute',inset:0,background:`linear-gradient(to top,rgba(4,4,10,${dim+0.45}) 0%,rgba(4,4,10,${dim*0.1}) 50%,transparent 100%)` }} />
-      </div>
-      <div ref={ref} style={{
-        position:'relative',zIndex:2,
-        padding:'clamp(48px,6vw,96px)',paddingBottom:'clamp(60px,8vw,110px)',
-        ...a,
-        opacity:visible?1:0,transform:visible?'none':'translateY(16px)',
-        transition:'opacity 1.5s ease,transform 1.5s ease',
-      }}>
-        {eyebrow && <div className="cap" style={{ marginBottom:16 }}>{eyebrow}</div>}
-        <h2 style={{ fontFamily:'var(--F)',fontSize:'clamp(28px,5vw,76px)',fontWeight:300,fontStyle:'italic',lineHeight:1.04,color:'var(--T)',margin:0 }}>{title}</h2>
-        {sub && <p style={{ fontFamily:'var(--F)',fontSize:'clamp(14px,1.5vw,18px)',fontStyle:'italic',color:'rgba(242,237,230,0.5)',marginTop:18,maxWidth:480,lineHeight:1.8,...(align==='center'?{margin:'18px auto 0',display:'block'}:{}) }}>{sub}</p>}
-      </div>
-    </section>
-  )
-}
+  <!-- ══ CINEMATIC CHAPTERS ══ -->
+  <div id="chapters">
 
-// ─── MASTERPLAN SECTION ───────────────────────────────────────────────────────
-function Masterplan() {
-  const { ref, visible } = useInView(0.1)
-  const villas = [
-    { n:'I',   name:'Arrival',         top:'72%', left:'18%', desc:'Estate entrance' },
-    { n:'II',  name:'Privacy',         top:'55%', left:'28%', desc:'Elevated seclusion' },
-    { n:'III', name:'Core Estate',     top:'42%', left:'42%', desc:'Architectural centre' },
-    { n:'IV',  name:'Infinity',        top:'30%', left:'56%', desc:'Primary ocean view' },
-    { n:'V',   name:'Wellness',        top:'48%', left:'65%', desc:'Spa adjacency' },
-    { n:'VI',  name:'Panoramic',       top:'20%', left:'72%', desc:'Highest elevation' },
-    { n:'VII', name:'Horizon',         top:'12%', left:'82%', desc:'Ultimate privacy' },
-  ]
-  return (
-    <section id="estate" style={{ background:'var(--D)',padding:'clamp(80px,10vw,140px) clamp(48px,7vw,110px)',borderTop:'1px solid var(--BL)' }}>
-      <div ref={ref} style={{ opacity:visible?1:0,transform:visible?'none':'translateY(16px)',transition:'all 1.4s ease' }}>
-        <div className="cap" style={{ marginBottom:18,fontSize:7 }}>Estate Masterplan · Single Coastal Estate</div>
-        <h2 style={{ fontFamily:'var(--F)',fontSize:'clamp(24px,3.5vw,54px)',fontWeight:300,fontStyle:'italic',color:'var(--T)',marginBottom:14 }}>
-          A designed sequence across the coastline
-        </h2>
-        <p style={{ fontFamily:'var(--F)',fontSize:'clamp(14px,1.4vw,17px)',fontStyle:'italic',color:'var(--T2)',maxWidth:560,lineHeight:1.85,marginBottom:'clamp(40px,6vw,72px)' }}>
-          Seven residences positioned across varying elevations, each commanding a distinct relationship with the ocean, landscape, and sky.
-        </p>
-
-        {/* Masterplan visual */}
-        <div style={{ position:'relative',height:'clamp(360px,50vw,600px)',background:'linear-gradient(160deg,rgba(7,7,14,1) 0%,rgba(12,12,24,1) 40%,rgba(4,8,20,1) 100%)',border:'1px solid var(--BL)',borderRadius:2,overflow:'hidden' }}>
-          {/* Ocean suggestion */}
-          <div style={{ position:'absolute',top:0,left:0,right:0,height:'40%',background:'linear-gradient(to bottom,rgba(8,20,48,0.8),rgba(8,24,56,0.2))',borderBottom:'1px solid rgba(200,168,92,0.06)' }}>
-            <div className="cap" style={{ position:'absolute',top:16,left:24,fontSize:6.5,color:'rgba(200,168,92,0.3)',letterSpacing:'0.5em' }}>Indian Ocean</div>
-          </div>
-          {/* Coastline line */}
-          <div style={{ position:'absolute',top:'40%',left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(200,168,92,0.2),rgba(200,168,92,0.4),rgba(200,168,92,0.2),transparent)' }} />
-          {/* Elevation gradient */}
-          <div style={{ position:'absolute',top:'40%',bottom:0,left:0,right:0,background:'linear-gradient(to bottom,rgba(10,14,8,0.2),rgba(6,8,4,0.6))' }} />
-          {/* Circulation path */}
-          <svg style={{ position:'absolute',inset:0,width:'100%',height:'100%' }} viewBox="0 0 800 500" preserveAspectRatio="none">
-            <path d="M 144 360 Q 224 280 336 210 Q 448 150 576 110 Q 656 90 672 80" fill="none" stroke="rgba(200,168,92,0.12)" strokeWidth="1" strokeDasharray="4 6" />
-          </svg>
-
-          {/* Villa markers */}
-          {villas.map(({ n, name, top, left, desc }, i) => (
-            <div key={n} style={{
-              position:'absolute',top,left,transform:'translate(-50%,-50%)',
-              opacity:visible?1:0,
-              transition:`all 1s ease ${0.6+i*0.1}s`,
-              cursor:'none',
-            }}>
-              <div style={{ position:'relative',display:'flex',flexDirection:'column',alignItems:'center',gap:8 }}>
-                <div style={{ width:28,height:28,borderRadius:'50%',border:'1px solid rgba(200,168,92,0.5)',background:'rgba(4,4,10,0.85)',display:'flex',alignItems:'center',justifyContent:'center',animation:'breathe 3s ease infinite',animationDelay:`${i*0.4}s` }}>
-                  <div style={{ fontFamily:'var(--H)',fontSize:8,fontWeight:300,color:'var(--gold)',letterSpacing:'0.05em' }}>{n}</div>
-                </div>
-                <div style={{ background:'rgba(4,4,10,0.8)',border:'1px solid var(--BL)',padding:'4px 8px',whiteSpace:'nowrap',textAlign:'center' }}>
-                  <div style={{ fontFamily:'var(--B)',fontSize:7,fontWeight:200,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--T2)' }}>{name}</div>
-                  <div style={{ fontFamily:'var(--F)',fontSize:9,fontStyle:'italic',color:'var(--T3)',marginTop:1 }}>{desc}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Legend */}
-          <div style={{ position:'absolute',bottom:20,right:24,display:'flex',gap:16,alignItems:'center' }}>
-            <div style={{ display:'flex',alignItems:'center',gap:6 }}>
-              <div style={{ width:16,height:1,background:'rgba(200,168,92,0.3)',borderTop:'1px dashed rgba(200,168,92,0.3)' }} />
-              <div className="cap" style={{ fontSize:6,color:'var(--T3)',letterSpacing:'0.3em' }}>Circulation pathway</div>
-            </div>
-            <div style={{ display:'flex',alignItems:'center',gap:6 }}>
-              <div style={{ width:8,height:8,borderRadius:'50%',border:'1px solid rgba(200,168,92,0.5)' }} />
-              <div className="cap" style={{ fontSize:6,color:'var(--T3)',letterSpacing:'0.3em' }}>Ventus residence</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats row */}
-        <div className="c4" style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',marginTop:1,borderTop:'1px solid var(--BL)',borderBottom:'1px solid var(--BL)' }}>
-          {[
-            { v:'1', l:'Contiguous coastal estate' },
-            { v:'7', l:'Private residences' },
-            { v:'4', l:'Elevation changes' },
-            { v:'∞', l:'Ocean horizon' },
-          ].map(({ v, l }, i) => (
-            <div key={l} style={{ padding:'clamp(22px,3vw,36px)',borderRight:i<3?'1px solid var(--BL)':'none',opacity:visible?1:0,transform:visible?'none':'translateY(8px)',transition:`all 0.8s ease ${0.8+i*0.08}s` }}>
-              <div style={{ fontFamily:'var(--F)',fontSize:'clamp(24px,3.5vw,50px)',fontWeight:300,fontStyle:'italic',color:'var(--gold)',lineHeight:1,marginBottom:8 }}>{v}</div>
-              <div className="cap" style={{ fontSize:7.5,color:'var(--T3)' }}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// ─── VENTUS VILLA SEQUENCE (I–VII) ────────────────────────────────────────────
-const VENTUS_VILLAS = [
-  { roman:'I',   name:'Arrival Residence',          sub:'Closest connection to estate entrance and arrival sequence.',         price:'£1,250,000', tag:'Entry',       beds:3,baths:4,sqm:380,yld:'6.8%', img:IMG.entrance,   objPos:'center 40%', moment:'Emergence — the estate reveals itself.' },
-  { roman:'II',  name:'Elevated Privacy Residence', sub:'Slight elevation, partial ocean framing, increased seclusion.',       price:'£1,650,000', tag:'Signature',   beds:3,baths:4,sqm:440,yld:'7.2%', img:IMG.seaView2,   objPos:'center',     moment:'Ascent — privacy found in elevation.' },
-  { roman:'III', name:'Core Estate Residence',      sub:'Central balance point of the collection, architectural symmetry.',    price:'£1,950,000', tag:'Premium',     beds:4,baths:5,sqm:560,yld:'7.6%', img:IMG.window,     objPos:'center 50%', moment:'Stillness — the architecture at rest.' },
-  { roman:'IV',  name:'Signature Infinity Residence',sub:'Primary ocean-facing villa with strongest visual exposure to horizon.',price:'£2,100,000', tag:"Collector's", beds:4,baths:5,sqm:640,yld:'7.5%', img:IMG.pool2,      objPos:'center 45%', moment:'Revelation — where water meets the horizon.' },
-  { roman:'V',   name:'Wellness Adjacent Residence', sub:'Closest integration with spa and sanctuary environment.',            price:'£2,750,000', tag:'Grand',       beds:5,baths:6,sqm:720,yld:'8.2%', img:IMG.outdoor,    objPos:'center',     moment:'Restoration — architecture built for silence.' },
-  { roman:'VI',  name:'Panoramic Elevation Residence',sub:'Highest viewpoint, wide coastal framing, expansive views.',         price:'£3,200,000', tag:'Estate',      beds:5,baths:6,sqm:800,yld:'8.8%', img:IMG.penthouse,  objPos:'center 35%', moment:'Elevation — the full sweep of coastline.' },
-  { roman:'VII', name:'Ultra-Private Horizon Residence',sub:'Most exclusive, most secluded, ultimate end-of-collection villa.',  price:'£3,750,000', tag:'Flagship',   beds:5,baths:6,sqm:820,yld:'9.0%', img:IMG.master,     objPos:'center 30%', moment:'Completion — silence, horizon, and sovereignty.' },
-]
-
-function VillaSequence() {
-  const [active, setActive] = useState(0)
-  const { ref, visible } = useInView(0.06)
-  const villa = VENTUS_VILLAS[active]
-
-  return (
-    <section id="villas" ref={ref} style={{ background:'var(--D)',borderTop:'1px solid var(--BL)' }}>
-      <div style={{ padding:'clamp(60px,8vw,110px) clamp(48px,7vw,110px) 0',opacity:visible?1:0,transform:visible?'none':'translateY(14px)',transition:'all 1.1s ease' }}>
-        <div className="cap" style={{ marginBottom:12,fontSize:7,letterSpacing:'0.5em' }}>The Ventus Collection · Seven Residences</div>
-        <h2 style={{ fontFamily:'var(--F)',fontSize:'clamp(24px,4vw,58px)',fontWeight:300,fontStyle:'italic',color:'var(--T)',marginBottom:36 }}>
-          A sequence of seven emotional moments
-        </h2>
-
-        {/* Ventus navigation */}
-        <div style={{ display:'flex',flexWrap:'wrap',borderBottom:'1px solid var(--BL)',gap:0 }}>
-          {VENTUS_VILLAS.map((v, i) => (
-            <button key={v.roman} onClick={() => setActive(i)} style={{
-              fontFamily:'var(--H)',fontSize:10,fontWeight:300,
-              letterSpacing:'0.2em',background:'none',border:'none',cursor:'none',
-              padding:'12px 20px 12px 0',
-              color:active===i?'var(--gold)':'var(--T3)',
-              borderBottom:active===i?'1px solid var(--gold)':'1px solid transparent',
-              marginBottom:-1,transition:'all 0.4s',whiteSpace:'nowrap',
-            }}>
-              {v.roman}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div key={active} className="c2" style={{ display:'grid',gridTemplateColumns:'1fr 1fr',minHeight:'72vh',animation:'fadeIn 0.5s ease forwards' }}>
-        <div className="img-wrap" style={{ position:'relative',overflow:'hidden',minHeight:360 }}>
-          <img src={villa.img} alt={villa.name} loading="lazy" style={{ width:'100%',height:'100%',objectFit:'cover',objectPosition:villa.objPos,transition:'transform 0.8s ease' }} />
-          <div style={{ position:'absolute',inset:0,background:'linear-gradient(to top,rgba(4,4,10,0.7) 0%,transparent 60%)' }} />
-          <div style={{ position:'absolute',top:0,left:0,right:0,padding:'clamp(20px,3vw,36px)' }}>
-            <div style={{ display:'inline-block',background:'rgba(4,4,10,0.7)',backdropFilter:'blur(12px)',border:'1px solid var(--BL)',padding:'8px 14px' }}>
-              <span style={{ fontFamily:'var(--H)',fontSize:9,letterSpacing:'0.3em',color:'var(--gold)',textTransform:'uppercase' }}>Ventus {villa.roman}</span>
-            </div>
-          </div>
-          <div style={{ position:'absolute',bottom:'clamp(20px,3vw,36px)',left:'clamp(20px,3vw,36px)' }}>
-            <div style={{ background:'var(--gold)',color:'var(--K)',fontFamily:'var(--B)',fontSize:7,letterSpacing:'0.3em',textTransform:'uppercase',padding:'5px 12px',marginBottom:10,display:'inline-block' }}>{villa.tag}</div>
-            <p style={{ fontFamily:'var(--F)',fontSize:'clamp(13px,1.4vw,17px)',fontStyle:'italic',color:'rgba(242,237,230,0.65)',maxWidth:320,lineHeight:1.7 }}>{villa.moment}</p>
-          </div>
-        </div>
-
-        <div style={{ padding:'clamp(40px,5.5vw,80px)',display:'flex',flexDirection:'column',justifyContent:'center',background:'var(--M)' }}>
-          <div className="cap" style={{ marginBottom:10,fontSize:6.5,color:'var(--T3)',letterSpacing:'0.4em' }}>Ventus {villa.roman} · The Ventus Collection</div>
-          <h3 style={{ fontFamily:'var(--H)',fontSize:'clamp(13px,1.6vw,22px)',fontWeight:300,letterSpacing:'0.16em',color:'var(--T)',marginBottom:8,lineHeight:1.4,textTransform:'uppercase' }}>
-            {villa.name}
-          </h3>
-          <div style={{ fontFamily:'var(--F)',fontSize:'clamp(22px,3vw,42px)',fontWeight:300,color:'var(--gold)',marginBottom:10,fontStyle:'italic' }}>{villa.price}</div>
-          <p style={{ fontFamily:'var(--F)',fontSize:'clamp(13px,1.3vw,16px)',fontStyle:'italic',color:'var(--T2)',marginBottom:26,lineHeight:1.85 }}>{villa.sub}</p>
-
-          <div style={{ display:'flex',gap:22,marginBottom:22,paddingBottom:22,borderBottom:'1px solid var(--BL)' }}>
-            {[{v:villa.beds,l:'Bedrooms'},{v:villa.baths,l:'Bathrooms'},{v:`${villa.sqm}m²`,l:'Interior'},{v:villa.yld,l:'Est. Yield'}].map(({v,l}) => (
-              <div key={l}>
-                <div style={{ fontFamily:'var(--F)',fontSize:'clamp(15px,1.8vw,24px)',fontWeight:300,fontStyle:'italic',color:'var(--T)',lineHeight:1 }}>{v}</div>
-                <div className="cap" style={{ fontSize:6.5,color:'var(--T3)',marginTop:5 }}>{l}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ padding:'14px 18px',background:'rgba(200,168,92,0.04)',borderLeft:'2px solid rgba(200,168,92,0.3)',marginBottom:26 }}>
-            <div className="cap" style={{ fontSize:6.5,marginBottom:5 }}>Permanent Residency Included</div>
-            <p style={{ fontFamily:'var(--F)',fontSize:12,fontStyle:'italic',color:'var(--T3)',lineHeight:1.65 }}>Qualifies under EDB schemes. Buyer, spouse and all dependants receive permanent residence permit for duration of ownership.</p>
-          </div>
-
-          <div style={{ display:'flex',gap:10,flexWrap:'wrap' }}>
-            <a href="#contact" className="btn bg" style={{ fontSize:7,padding:'11px 24px' }}>Request Brochure</a>
-            <a href="#contact" className="btn bl" style={{ fontSize:7,padding:'11px 24px' }}>Arrange Viewing</a>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// ─── Quote ────────────────────────────────────────────────────────────────────
-function Quote({ text, attr }) {
-  const { ref, visible } = useInView(0.2)
-  return (
-    <section ref={ref} style={{ background:'var(--M)',padding:'clamp(80px,10vw,150px) clamp(48px,12vw,200px)',textAlign:'center',borderTop:'1px solid var(--BL)',borderBottom:'1px solid var(--BL)' }}>
-      <div style={{ width:visible?48:0,height:1,background:'linear-gradient(90deg,transparent,var(--gold),transparent)',margin:'0 auto 36px',transition:'width 1.4s ease',opacity:0.5 }} />
-      <blockquote style={{ fontFamily:'var(--F)',fontSize:'clamp(18px,3.2vw,46px)',fontWeight:300,fontStyle:'italic',lineHeight:1.28,color:'var(--T)',maxWidth:820,margin:'0 auto',opacity:visible?1:0,transform:visible?'none':'translateY(12px)',transition:'all 1.6s ease 0.2s' }}>
-        "{text}"
-      </blockquote>
-      {attr && <div className="cap" style={{ marginTop:32,fontSize:7.5,color:'var(--T3)',opacity:visible?1:0,transition:'opacity 1.2s ease 0.8s',letterSpacing:'0.4em' }}>{attr}</div>}
-    </section>
-  )
-}
-
-// ─── LORO PIANA INTERIORS SECTION ─────────────────────────────────────────────
-function LoroPianaInteriors() {
-  const { ref, visible } = useInView(0.1)
-  return (
-    <section style={{ background:'var(--K)',borderTop:'1px solid var(--BL)' }}>
-      <div ref={ref} style={{ padding:'clamp(80px,10vw,140px) clamp(48px,7vw,110px)',opacity:visible?1:0,transform:visible?'none':'translateY(16px)',transition:'all 1.4s ease' }}>
-        <div className="cap" style={{ marginBottom:20,fontSize:7,letterSpacing:'0.5em' }}>Ventus Residences · Interior Philosophy</div>
-        <div className="c2" style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'clamp(48px,8vw,120px)',alignItems:'center' }}>
-          <div>
-            <h2 style={{ fontFamily:'var(--F)',fontSize:'clamp(26px,4vw,62px)',fontWeight:300,fontStyle:'italic',color:'var(--T)',lineHeight:1.08,marginBottom:24 }}>
-              Tactile silence.<br />Cashmere softness.
-            </h2>
-            <div style={{ width:44,height:1,background:'linear-gradient(90deg,var(--gold),transparent)',marginBottom:24,opacity:0.6 }} />
-            <p style={{ fontFamily:'var(--F)',fontSize:'clamp(14px,1.5vw,18px)',fontStyle:'italic',color:'var(--T2)',lineHeight:1.9,marginBottom:18 }}>
-              Each Ventus residence is a private atelier of material restraint — neutral palette, enduring quality, luxury stillness.
-            </p>
-            <p style={{ fontFamily:'var(--F)',fontSize:'clamp(13px,1.3vw,16px)',fontStyle:'italic',color:'var(--T3)',lineHeight:1.9,marginBottom:32 }}>
-              Reclaimed teak. Calacatta Oro. Belgian linen in grain and stone. Nothing left to chance. Nothing placed without intention.
-            </p>
-            <div style={{ borderTop:'1px solid var(--BL)',paddingTop:24 }}>
-              {['Bespoke furniture programme','Stone from Carrara & Azul Macaúbas','Hand-loomed textile walls','Artisan bronze hardware throughout'].map((item, i) => (
-                <div key={item} style={{ display:'flex',alignItems:'center',gap:14,marginBottom:12,opacity:visible?1:0,transition:`opacity 0.8s ease ${0.6+i*0.1}s` }}>
-                  <div style={{ width:20,height:1,background:'var(--gold)',opacity:0.4,flexShrink:0 }} />
-                  <div style={{ fontFamily:'var(--F)',fontSize:13,fontStyle:'italic',color:'var(--T2)' }}>{item}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ display:'flex',flexDirection:'column',gap:2 }}>
-            {[IMG.interior, IMG.living, IMG.screenshot].map((src, i) => (
-              <div key={i} className="img-wrap" style={{ position:'relative',height:'clamp(140px,18vw,240px)',overflow:'hidden',opacity:visible?1:0,transform:visible?'none':'translateY(12px)',transition:`all 1s ease ${0.3+i*0.15}s` }}>
-                <img src={src} alt="" loading="lazy" style={{ width:'100%',height:'100%',objectFit:'cover',objectPosition:'center',transition:'transform 0.8s ease' }} />
-                <div style={{ position:'absolute',inset:0,background:'rgba(4,4,10,0.15)' }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// ─── HELICOPTER ARRIVAL ───────────────────────────────────────────────────────
-function HelicopterArrival() {
-  const ref = useRef(null)
-  const [progress, setProgress] = useState(0)
-  useEffect(() => {
-    const fn = () => {
-      const el = ref.current; if (!el) return
-      const rect = el.getBoundingClientRect()
-      const p = -rect.top / window.innerHeight
-      setProgress(Math.min(1, Math.max(0, p)))
-    }
-    window.addEventListener('scroll', fn, { passive:true }); fn()
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
-  const capOp = progress > 0.1 && progress < 0.65
-    ? Math.min(1, (progress - 0.1) / 0.18, (0.65 - progress) / 0.12)
-    : 0
-
-  return (
-    <section ref={ref} style={{ position:'relative',height:'100dvh',overflow:'hidden',background:'var(--K)' }}>
-      <div style={{ position:'absolute',inset:0,background:'linear-gradient(160deg,rgba(4,8,24,1) 0%,rgba(6,12,32,1) 50%,rgba(4,4,10,1) 100%)' }} />
-      {/* Aerial view simulation */}
-      <div className="img-wrap" style={{ position:'absolute',inset:0,opacity:0.35 }}>
-        <img src={IMG.seaVIew} alt="Aerial arrival" loading="lazy" style={{ width:'100%',height:'100%',objectFit:'cover',objectPosition:'center 20%',transform:`scale(${1 + progress*0.06})` }} />
-      </div>
-      <div style={{ position:'absolute',inset:0,background:'radial-gradient(ellipse at 50% 40%, rgba(4,4,10,0) 0%, rgba(4,4,10,0.9) 100%)' }} />
-
-      <div style={{
-        position:'absolute',bottom:'clamp(80px,10vh,120px)',left:0,right:0,
-        textAlign:'center',
-        opacity:capOp,
-        transform:`translateY(${(1-capOp)*16}px)`,
-        padding:'0 clamp(40px,8vw,140px)',
-        pointerEvents:'none',
-      }}>
-        <div className="cap" style={{ marginBottom:20,fontSize:7,letterSpacing:'0.55em' }}>Private Helicopter Arrival · The Ventus Collection</div>
-        <h2 style={{ fontFamily:'var(--H)',fontSize:'clamp(18px,2.8vw,44px)',fontWeight:300,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--T)',lineHeight:1.4,marginBottom:20 }}>
-          You do not arrive here<br />like a tourist
-        </h2>
-        <div style={{ width:44,height:1,background:'linear-gradient(90deg,transparent,var(--gold),transparent)',margin:'0 auto 24px',opacity:0.6 }} />
-        <p style={{ fontFamily:'var(--F)',fontSize:'clamp(14px,1.6vw,20px)',fontStyle:'italic',color:'rgba(242,237,230,0.5)',maxWidth:480,margin:'0 auto',lineHeight:1.85 }}>
-          Aerial coastline approach. Estate revealed from above. Descent into The Ventus Collection.
-        </p>
-      </div>
-
-      {/* Flight path visualization */}
-      <svg style={{ position:'absolute',inset:0,width:'100%',height:'100%',opacity:progress>0.1?Math.min(0.4,(progress-0.1)*2):0,transition:'opacity 1s ease' }} viewBox="0 0 1000 600" preserveAspectRatio="none">
-        <path d="M 100 100 Q 300 200, 500 350 Q 650 430, 780 480" fill="none" stroke="rgba(200,168,92,0.5)" strokeWidth="0.5" strokeDasharray="6 8" />
-        <circle cx="780" cy="480" r="6" fill="none" stroke="rgba(200,168,92,0.6)" strokeWidth="0.8" />
-        <circle cx="780" cy="480" r="16" fill="none" stroke="rgba(200,168,92,0.2)" strokeWidth="0.5" />
-      </svg>
-    </section>
-  )
-}
-
-// ─── Island ───────────────────────────────────────────────────────────────────
-function Island() {
-  return (
-    <section style={{ background:'var(--D)',borderTop:'1px solid var(--BL)' }}>
-      <div className="c3" style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',borderBottom:'1px solid var(--BL)' }}>
-        {[{v:'330',u:'days',l:'of sunshine per year'},{v:'27°',u:'avg',l:'Indian Ocean temperature'},{v:'5',u:'min',l:'to Grand Baie marina'}].map(({v,u,l},i) => (
-          <div key={l} style={{ padding:'clamp(36px,5vw,64px)',borderRight:i<2?'1px solid var(--BL)':'none',textAlign:'center' }}>
-            <div style={{ fontFamily:'var(--F)',fontSize:'clamp(30px,4.5vw,62px)',fontWeight:300,fontStyle:'italic',color:'var(--gold)',lineHeight:1 }}>
-              {v}<span style={{ fontSize:'32%',marginLeft:5,color:'var(--T3)' }}>{u}</span>
-            </div>
-            <div className="cap" style={{ fontSize:7.5,color:'var(--T3)',marginTop:10 }}>{l}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-// ─── WELLNESS ─────────────────────────────────────────────────────────────────
-function WellnessDescent() {
-  const ref = useRef(null)
-  const [scrollY, setScrollY] = useState(0)
-  const [elTop, setElTop] = useState(0)
-  useEffect(() => {
-    const fn = () => {
-      setScrollY(window.scrollY)
-      if (ref.current) setElTop(ref.current.offsetTop)
-    }
-    window.addEventListener('scroll', fn, { passive:true }); fn()
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-  const progress = Math.min(1, Math.max(0, (scrollY - elTop + vh) / (vh * 1.6)))
-  const dark = progress < 0.4 ? 0 : Math.min(1,(progress-0.4)/0.45)
-  const blur = dark * 14
-  const txt  = progress < 0.6 ? 0 : Math.min(1,(progress-0.6)*8)
-  return (
-    <div ref={ref} style={{ minHeight:'140dvh',position:'relative',overflow:'hidden' }}>
-      <img src={IMG.spa2} alt="Wellness" style={{ width:'100%',height:'100%',objectFit:'cover',objectPosition:'center 30%',position:'absolute',inset:0,filter:`blur(${blur}px)`,transform:`scale(${1+progress*0.05+blur*0.005})` }} />
-      <div style={{ position:'absolute',inset:0,background:`rgba(3,3,8,${dark})` }} />
-      <div style={{ position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'40px clamp(40px,8vw,120px)',opacity:txt }}>
-        <div className="cap" style={{ marginBottom:22,letterSpacing:'0.55em',fontSize:7 }}>Descend · Restore · Transcend</div>
-        <h2 style={{ fontFamily:'var(--H)',fontSize:'clamp(24px,4vw,58px)',fontWeight:300,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--T)',lineHeight:1.28,marginBottom:24 }}>
-          The Wellness<br />
-          <span style={{ background:'linear-gradient(90deg,var(--gold3),var(--gold),var(--gold2),var(--gold))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text' }}>Sanctuary</span>
-        </h2>
-        <div style={{ width:44,height:1,background:'linear-gradient(90deg,transparent,var(--gold),transparent)',opacity:0.5,margin:'0 auto' }} />
+    <div class="chapter" data-parallax>
+      <img class="chapter-img"
+        src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Entrance.png"
+        alt="Entrance — Ventus" loading="lazy"
+      />
+      <div class="chapter-scrim"></div>
+      <div class="chapter-body rv">
+        <div class="chapter-index">01</div>
+        <div class="chapter-label">The Entrance</div>
+        <h2 class="chapter-title">Step through.<br/>The world outside<br/>stays there.</h2>
       </div>
     </div>
-  )
-}
 
-function Wellness() {
-  const { ref, visible } = useInView()
-  return (
-    <section id="wellness" style={{ background:'var(--spa)' }}>
-      {/* NOTE: "In-Residence Wellness / Spa Sanctuary / Ancient Mauritian healing" section removed per brief */}
-      {/* First spa image shown is Spa 2.png (already used in WellnessDescent above), then progression */}
-      <Panel src={IMG.spa2}    eyebrow="Wellness Sanctuary · Opening Ritual" title="Where stone meets silence"          sub="Volcanic basalt. Mineral water. The body restored." objPos="center 30%" dim={0.55} />
-      <Panel src={IMG.spaEntry} eyebrow="Concierge Wellness"    title="Your Dedicated Curator"    sub="A personal wellness director — anticipating every need before it becomes one." align="right" dim={0.52} />
-      <Panel src={IMG.spa1}    eyebrow="Treatment Sanctuary"   title="Ancient ritual, modern form" sub="Island botanicals · Cold ocean mineral · Volcanic stone." align="center" dim={0.58} />
-      <Panel src={IMG.spa3}    eyebrow="Deep Restoration"      title="Total surrender"              sub="Total silence. Total renewal." dim={0.6} />
-      <div ref={ref} className="c4" style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',borderTop:'1px solid rgba(200,168,92,0.04)' }}>
-        {[{n:'Hydrotherapy',d:'Heated jet pool, cold plunge, mineral steam'},{n:'Body Rituals',d:'Volcanic stone · Coconut · Ayurvedic'},{n:'Yoga Pavilion',d:'Sunrise & sunset, resident instructor'},{n:'Nutrition',d:'Ayurvedic & plant-based cuisine'}].map(({n,d},i) => (
-          <div key={n} style={{ padding:'clamp(28px,3.5vw,52px) clamp(18px,2.5vw,36px)',borderRight:i<3?'1px solid rgba(200,168,92,0.04)':'none',opacity:visible?1:0,transform:visible?'none':'translateY(10px)',transition:`all 0.9s ease ${i*0.1}s` }}>
-            <div className="cap" style={{ fontSize:7.5,marginBottom:10 }}>{n}</div>
-            <p style={{ fontFamily:'var(--F)',fontSize:13,fontStyle:'italic',color:'rgba(242,237,230,0.24)',lineHeight:1.78 }}>{d}</p>
-          </div>
-        ))}
+    <div class="chapter" data-parallax>
+      <img class="chapter-img"
+        src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Interior.png"
+        alt="Interior — Ventus Villa" loading="lazy"
+      />
+      <div class="chapter-scrim"></div>
+      <div class="chapter-body rv">
+        <div class="chapter-index">02</div>
+        <div class="chapter-label">The Interior</div>
+        <h2 class="chapter-title">Every surface chosen.<br/>Nothing left to chance.</h2>
       </div>
-    </section>
-  )
-}
-
-// ─── INVESTMENT INFOGRAPHICS ──────────────────────────────────────────────────
-function StatBox({ target, suffix, prefix='', label, note, dec=0, active, delay=0, border }) {
-  const [go, setGo] = useState(false)
-  useEffect(() => { if (active) { const t = setTimeout(() => setGo(true), delay); return () => clearTimeout(t) } }, [active,delay])
-  const val = useCount(target, go, 2200, dec)
-  return (
-    <div style={{ padding:'clamp(36px,5vw,64px) clamp(18px,3vw,40px)',borderRight:border?'1px solid var(--BL)':'none',textAlign:'center' }}>
-      <div style={{ fontFamily:'var(--F)',fontSize:'clamp(28px,4.5vw,68px)',fontWeight:300,fontStyle:'italic',lineHeight:1,color:'var(--gold)',marginBottom:10 }}>
-        {prefix}{dec===0?Math.round(val):val.toFixed(dec)}{suffix}
-      </div>
-      <div className="cap" style={{ fontSize:7.5,marginBottom:7 }}>{label}</div>
-      <div style={{ fontFamily:'var(--F)',fontSize:12,fontStyle:'italic',color:'var(--T3)' }}>{note}</div>
     </div>
-  )
-}
 
-function InvestmentInfographics() {
-  const { ref, visible } = useInView(0.15)
-  return (
-    <section id="invest" style={{ background:'var(--K)',borderTop:'1px solid var(--BL)' }}>
-      {/* Header */}
-      <div ref={ref} style={{ padding:'clamp(80px,10vw,130px) clamp(48px,7vw,110px) clamp(40px,5vw,64px)',opacity:visible?1:0,transform:visible?'none':'translateY(16px)',transition:'all 1.4s ease' }}>
-        <div className="cap" style={{ marginBottom:20,fontSize:7,letterSpacing:'0.5em' }}>Market Intelligence · Mauritius 2025–2026</div>
-        <h2 style={{ fontFamily:'var(--H)',fontSize:'clamp(22px,3.5vw,52px)',fontWeight:300,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--T)',lineHeight:1.2,marginBottom:20 }}>
-          Investment Grade<br />Intelligence
-        </h2>
-        <p style={{ fontFamily:'var(--F)',fontSize:'clamp(14px,1.5vw,18px)',fontStyle:'italic',color:'var(--T2)',maxWidth:560,lineHeight:1.85 }}>
-          Five converging forces constitute an irrefutable argument for coastal real estate in Mauritius — capital appreciation, rental yield, permanent residency, zero capital gains, and a way of life unavailable anywhere else on earth.
-        </p>
+    <div class="chapter" data-parallax>
+      <img class="chapter-img"
+        src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Infinity%20Pool.png"
+        alt="Infinity Pool — Ventus" loading="lazy"
+      />
+      <div class="chapter-scrim"></div>
+      <div class="chapter-body rv">
+        <div class="chapter-index">03</div>
+        <div class="chapter-label">The Pool</div>
+        <h2 class="chapter-title">Where the water ends<br/>and the ocean begins.</h2>
       </div>
+    </div>
 
-      {/* Primary stats */}
-      <div className="c2" style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',borderTop:'1px solid var(--BL)',borderBottom:'1px solid var(--BL)' }}>
-        {[
-          {target:13.89,suffix:'%',label:'RPPI Growth Q3 2025',  note:'Statistics Mauritius',dec:2},
-          {target:140,  suffix:'%',label:'Growth since 2019',     note:'Cumulative property price index'},
-          {target:9,    suffix:'%',label:'Gross Rental Yield',    note:'Short-term luxury coastal villa'},
-          {target:67,   suffix:'%',label:'Wealth Growth 2015–25', note:"Africa's strongest decade"},
-        ].map((d,i) => <StatBox key={d.label} {...d} active={visible} delay={i*150} border={i<3} />)}
+    <div class="chapter" data-parallax>
+      <img class="chapter-img"
+        src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/grok-image-86070f82-2171-4501-8fe6-d6f72d7d1dcb.png"
+        alt="East Coast Lagoon — Ventus" loading="lazy"
+      />
+      <div class="chapter-scrim"></div>
+      <div class="chapter-body rv">
+        <div class="chapter-index">04</div>
+        <div class="chapter-label">The Lagoon</div>
+        <h2 class="chapter-title">East Coast waters.<br/>Impossibly clear.<br/>Eternally yours.</h2>
       </div>
+    </div>
 
-      {/* Investment categories */}
-      <div className="c2" style={{ display:'grid',gridTemplateColumns:'1fr 1fr',borderBottom:'1px solid var(--BL)' }}>
-        {/* Real Estate Performance */}
-        <div style={{ padding:'clamp(40px,5vw,72px)',borderRight:'1px solid var(--BL)' }}>
-          <div className="cap" style={{ marginBottom:18,fontSize:7 }}>Real Estate Performance</div>
-          {[
-            { label:'RPPI Year-on-Year',         value:'+13.89%', note:'Q3 2025' },
-            { label:'Growth since 2019',          value:'+140%',   note:'Cumulative' },
-            { label:'2026 Forecast (coastal)',    value:'8–12%',   note:'Projected appreciation' },
-            { label:'VEFA off-plan advantage',    value:'30–60%',  note:'Below completion pricing' },
-          ].map(({ label, value, note }, i) => (
-            <div key={label} style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 0',borderBottom:'1px solid rgba(200,168,92,0.05)',opacity:visible?1:0,transition:`opacity 0.8s ease ${0.4+i*0.08}s` }}>
-              <div>
-                <div className="cap" style={{ fontSize:7,marginBottom:3,color:'var(--T3)' }}>{label}</div>
-                <div style={{ fontFamily:'var(--F)',fontSize:11,fontStyle:'italic',color:'var(--T3)' }}>{note}</div>
-              </div>
-              <div style={{ fontFamily:'var(--F)',fontSize:'clamp(16px,2vw,26px)',fontWeight:300,fontStyle:'italic',color:'var(--gold)' }}>{value}</div>
-            </div>
-          ))}
-        </div>
+  </div>
 
-        {/* Rental Yields */}
-        <div style={{ padding:'clamp(40px,5vw,72px)' }}>
-          <div className="cap" style={{ marginBottom:18,fontSize:7 }}>Rental Yields & Market</div>
-          {[
-            { label:'Long-term rental',     value:'3–5%',       note:'Gross annual yield' },
-            { label:'Short-term luxury',    value:'5–9%',       note:'Premium coastal villas' },
-            { label:'Tourism arrivals',     value:'1.436M',     note:'+3.9% growth' },
-            { label:'FDI inflow 2025',      value:'Rs 21.39B',  note:'Foreign direct investment' },
-            { label:'Foreign approvals',    value:'862',        note:'Verified 2025' },
-            { label:'Luxury units sold',    value:'5,396',      note:'Historical market depth' },
-          ].map(({ label, value, note }, i) => (
-            <div key={label} style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 0',borderBottom:'1px solid rgba(200,168,92,0.05)',opacity:visible?1:0,transition:`opacity 0.8s ease ${0.6+i*0.08}s` }}>
-              <div>
-                <div className="cap" style={{ fontSize:7,marginBottom:3,color:'var(--T3)' }}>{label}</div>
-                <div style={{ fontFamily:'var(--F)',fontSize:11,fontStyle:'italic',color:'var(--T3)' }}>{note}</div>
-              </div>
-              <div style={{ fontFamily:'var(--F)',fontSize:'clamp(14px,1.6vw,22px)',fontWeight:300,fontStyle:'italic',color:'var(--gold)' }}>{value}</div>
-            </div>
-          ))}
-        </div>
+  <!-- ══ STATS STRIP ══ -->
+  <div id="stats">
+    <div id="stats-inner">
+      <div class="stat rv">
+        <div class="stat-n" data-count="7">7</div>
+        <div class="stat-l">Boutique Villas</div>
       </div>
-
-      {/* Tax & Residency */}
-      <div className="c2" style={{ display:'grid',gridTemplateColumns:'1fr 1fr',borderBottom:'1px solid var(--BL)' }}>
-        {/* Tax */}
-        <div style={{ padding:'clamp(40px,5vw,72px)',borderRight:'1px solid var(--BL)' }}>
-          <div className="cap" style={{ marginBottom:20,fontSize:7 }}>Tax Structure</div>
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:2,marginBottom:20 }}>
-            {[
-              { label:'Capital Gains Tax', value:'0%' },
-              { label:'Estate Tax', value:'0%' },
-              { label:'Annual Property Tax', value:'0%' },
-              { label:'Inheritance Tax', value:'0%' },
-            ].map(({ label, value }, i) => (
-              <div key={label} style={{ background:'rgba(200,168,92,0.04)',border:'1px solid var(--BL)',padding:'clamp(18px,2.5vw,28px)',opacity:visible?1:0,transition:`opacity 0.9s ease ${0.5+i*0.1}s` }}>
-                <div style={{ fontFamily:'var(--F)',fontSize:'clamp(28px,4vw,52px)',fontWeight:300,fontStyle:'italic',color:'var(--gold)',lineHeight:1,marginBottom:8 }}>{value}</div>
-                <div className="cap" style={{ fontSize:6.5,color:'var(--T3)' }}>{label}</div>
-              </div>
-            ))}
-          </div>
-          <p style={{ fontFamily:'var(--F)',fontSize:13,fontStyle:'italic',color:'var(--T3)',lineHeight:1.75 }}>Full capital repatriation. No restriction on profit transfer.</p>
-        </div>
-
-        {/* Residency */}
-        <div style={{ padding:'clamp(40px,5vw,72px)' }}>
-          <div className="cap" style={{ marginBottom:20,fontSize:7 }}>Residency Pathways</div>
-          {[
-            { title:'Permanent Residence Permit', note:'From £1.25M · Ventus qualification threshold', detail:'Buyer, spouse and all dependants included. Valid for duration of ownership. 20-year renewable.', tag:'INCLUDED' },
-            { title:'2026 Golden Visa', note:'From $1M investment route', detail:'Family inclusion. Full residency rights. New pathway launching 2026.', tag:'NEW 2026' },
-          ].map(({ title, note, detail, tag }, i) => (
-            <div key={title} style={{ padding:'clamp(18px,2.5vw,28px)',background:'rgba(200,168,92,0.03)',borderLeft:'2px solid rgba(200,168,92,0.25)',marginBottom:16,opacity:visible?1:0,transition:`opacity 0.9s ease ${0.6+i*0.15}s` }}>
-              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8 }}>
-                <div className="cap" style={{ fontSize:7 }}>{title}</div>
-                <div style={{ fontFamily:'var(--B)',fontSize:6,letterSpacing:'0.3em',background:'var(--gold)',color:'var(--K)',padding:'3px 8px' }}>{tag}</div>
-              </div>
-              <div style={{ fontFamily:'var(--F)',fontSize:12,fontStyle:'italic',color:'var(--T2)',marginBottom:6 }}>{note}</div>
-              <div style={{ fontFamily:'var(--F)',fontSize:11,fontStyle:'italic',color:'var(--T3)',lineHeight:1.65 }}>{detail}</div>
-            </div>
-          ))}
-        </div>
+      <div class="stat rv">
+        <div class="stat-n"><span class="sup">£</span>1.25M</div>
+        <div class="stat-l">Prices From</div>
       </div>
-
-      {/* Urgency — duty rising */}
-      <div style={{ padding:'clamp(40px,6vw,80px) clamp(48px,7vw,110px)',background:'rgba(200,168,92,0.03)',borderBottom:'1px solid var(--BL)',opacity:visible?1:0,transition:'opacity 1.2s ease 0.8s' }}>
-        <div style={{ display:'flex',flexWrap:'wrap',gap:'clamp(24px,5vw,72px)',alignItems:'center',justifyContent:'space-between' }}>
-          <div>
-            <div className="cap" style={{ marginBottom:14,fontSize:7,color:'rgba(200,168,92,0.7)' }}>Critical Deadline · Act Before July 2026</div>
-            <h3 style={{ fontFamily:'var(--F)',fontSize:'clamp(18px,2.8vw,40px)',fontWeight:300,fontStyle:'italic',color:'var(--T)',lineHeight:1.2,marginBottom:12 }}>
-              Registration duty doubles<br />on 1 July 2026
-            </h3>
-            <p style={{ fontFamily:'var(--F)',fontSize:'clamp(13px,1.3vw,16px)',fontStyle:'italic',color:'var(--T2)',maxWidth:480,lineHeight:1.85 }}>
-              Non-citizen registration duty rises from 5% to 10% on 1 July 2026. Complete your purchase before this date and save significantly on the total acquisition cost.
-            </p>
-          </div>
-          <div style={{ display:'flex',gap:24,alignItems:'center' }}>
-            <div style={{ textAlign:'center',padding:'clamp(20px,3vw,36px)',border:'1px solid var(--BH)' }}>
-              <div style={{ fontFamily:'var(--F)',fontSize:'clamp(28px,4vw,56px)',fontWeight:300,fontStyle:'italic',lineHeight:1,color:'var(--gold)',textDecoration:'line-through',opacity:0.6 }}>5%</div>
-              <div className="cap" style={{ fontSize:6.5,marginTop:6,color:'var(--T3)' }}>Current rate</div>
-            </div>
-            <div style={{ fontFamily:'var(--F)',fontSize:20,color:'var(--T3)',fontStyle:'italic' }}>→</div>
-            <div style={{ textAlign:'center',padding:'clamp(20px,3vw,36px)',border:'1px solid rgba(200,168,92,0.5)',background:'rgba(200,168,92,0.05)' }}>
-              <div style={{ fontFamily:'var(--F)',fontSize:'clamp(28px,4vw,56px)',fontWeight:300,fontStyle:'italic',lineHeight:1,color:'var(--T)' }}>10%</div>
-              <div className="cap" style={{ fontSize:6.5,marginTop:6,color:'var(--T3)' }}>After 1 Jul 2026</div>
-            </div>
-          </div>
-        </div>
+      <div class="stat rv">
+        <div class="stat-n" data-count="9"><span id="yield-n">9</span><span class="sup">%</span></div>
+        <div class="stat-l">Est. Gross Yield</div>
       </div>
-
-      {/* Wealth growth hero */}
-      <div style={{ padding:'clamp(80px,10vw,140px) clamp(48px,7vw,110px)',textAlign:'center',borderBottom:'1px solid var(--BL)' }}>
-        <div className="cap" style={{ marginBottom:14,fontSize:7 }}>Africa's Strongest Decade of Wealth Growth</div>
-        <div style={{ fontFamily:'var(--F)',fontSize:'clamp(72px,12vw,152px)',fontWeight:300,fontStyle:'italic',color:'var(--gold)',lineHeight:1,marginBottom:16 }}>+67%</div>
-        <p style={{ fontFamily:'var(--F)',fontSize:'clamp(14px,1.4vw,17px)',fontStyle:'italic',color:'var(--T2)',maxWidth:380,margin:'0 auto 36px',lineHeight:1.85 }}>
-          Total investable wealth growth, Mauritius 2015–2025.
-        </p>
-        <a href="#contact" className="btn bg">Request Investment Brief</a>
+      <div class="stat rv">
+        <div class="stat-n">0<span class="sup">%</span></div>
+        <div class="stat-l">Capital Gains Tax</div>
       </div>
-    </section>
-  )
-}
-
-// ─── Contact ──────────────────────────────────────────────────────────────────
-function Contact() {
-  const { ref, visible } = useInView()
-  return (
-    <section id="contact" style={{ background:'var(--D)',borderTop:'1px solid var(--BL)' }}>
-      <div ref={ref} className="c2" style={{ display:'grid',gridTemplateColumns:'1fr 1fr',minHeight:'72vh' }}>
-        <div style={{ padding:'clamp(64px,8vw,110px) clamp(48px,6vw,88px)',display:'flex',flexDirection:'column',justifyContent:'center',borderRight:'1px solid var(--BL)' }}>
-          <div style={{ opacity:visible?1:0,transform:visible?'none':'translateY(14px)',transition:'all 1.2s ease 0.1s' }}>
-            <div className="cap" style={{ marginBottom:20,fontSize:7,letterSpacing:'0.5em' }}>Private Access Only</div>
-            <h2 style={{ fontFamily:'var(--H)',fontSize:'clamp(22px,3.2vw,48px)',fontWeight:300,letterSpacing:'0.14em',textTransform:'uppercase',lineHeight:1.28,marginBottom:20,color:'var(--T)' }}>
-              Arrange a<br />Private Viewing
-            </h2>
-            <div style={{ width:44,height:1,background:'linear-gradient(90deg,var(--gold),transparent)',marginBottom:24,opacity:0.6 }} />
-            <p style={{ fontFamily:'var(--F)',fontSize:'clamp(13px,1.3vw,16px)',fontStyle:'italic',lineHeight:1.9,color:'var(--T2)',maxWidth:340,marginBottom:36 }}>
-              All seven Ventus residences available by private appointment. Advisors available around the clock across every time zone.
-            </p>
-            <div className="cap" style={{ fontSize:7.5,color:'var(--T3)',lineHeight:2.4 }}>
-              hello@ventusestate.mu<br />+230 5000 0000
-            </div>
-            <div style={{ marginTop:28,padding:'16px 20px',background:'rgba(200,168,92,0.04)',borderLeft:'2px solid rgba(200,168,92,0.2)' }}>
-              <div className="cap" style={{ fontSize:6.5,marginBottom:6 }}>Permanent Residency from £1,250,000</div>
-              <p style={{ fontFamily:'var(--F)',fontSize:12,fontStyle:'italic',color:'var(--T3)',lineHeight:1.65 }}>Complete the enquiry form to receive the private brochure and investment memorandum for The Ventus Collection.</p>
-            </div>
-          </div>
-        </div>
-        <div style={{ padding:'clamp(64px,8vw,110px) clamp(48px,6vw,88px)',display:'flex',flexDirection:'column',justifyContent:'center',opacity:visible?1:0,transition:'opacity 1.2s ease 0.3s' }}>
-          <div style={{ display:'flex',flexDirection:'column',gap:24 }}>
-            {[{pl:'Full Name',t:'text'},{pl:'Email Address',t:'email'},{pl:'Phone · WhatsApp',t:'tel'},{pl:'Country of Residence',t:'text'},{pl:'Ventus Residence of Interest (I–VII)',t:'text'}].map(({pl,t}) => (
-              <input key={pl} type={t} placeholder={pl} />
-            ))}
-            <textarea placeholder="Your enquiry or preferred viewing dates" rows={3} style={{ resize:'none' }} />
-            <a href="mailto:hello@ventusestate.mu" className="btn bg" style={{ textAlign:'center',marginTop:8 }}>Submit Private Enquiry</a>
-          </div>
-        </div>
+      <div class="stat rv">
+        <div class="stat-n" data-count="4">4</div>
+        <div class="stat-l">Design Partners</div>
       </div>
-    </section>
-  )
-}
+      <div class="stat rv">
+        <div class="stat-n"><span class="sup">∞</span></div>
+        <div class="stat-l">Residency Included</div>
+      </div>
+    </div>
+  </div>
 
-// ─── Footer ───────────────────────────────────────────────────────────────────
-function Footer() {
-  return (
-    <footer style={{ background:'var(--K)',borderTop:'1px solid var(--BL)',padding:'clamp(24px,3.5vw,44px) clamp(48px,7vw,110px)',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14 }}>
+  <!-- ══ ALTERNATING FEATURES ══ -->
+
+  <div class="feature">
+    <div class="feat-img" data-parallax-sm>
+      <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Outdoor.png" alt="SAOTA Architecture — Ventus" loading="lazy" />
+    </div>
+    <div class="feat-text">
+      <div class="feat-text-inner">
+        <div class="eyebrow rv">Architecture · SAOTA</div>
+        <h2 class="rv">Designed to<br/><em>disappear.</em></h2>
+        <div class="gold-rule rv" style="margin:0 0 28px;"></div>
+        <p class="rv">SAOTA's architecture serves the view, not itself. Clean horizontal planes, raw concrete, and deep cantilevers — buildings sculpted by wind and tide rather than imposed upon the landscape.</p>
+        <p class="rv">Each Ventus villa is oriented toward the prevailing trade winds, framing the east coast lagoon and disappearing into the tropical canopy at every opportunity.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="lp-interlude" data-parallax>
+    <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/LPInterior.png" alt="Loro Piana Interiors — Ventus" loading="lazy" />
+    <div id="lp-interlude-text" class="rv">
+      <p>Loro Piana Interiors &middot; Est. 1924 &middot; Novara, Italy</p>
+      <h2>The finest materials<br/>on earth.</h2>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feat-img" data-parallax-sm>
+      <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/LPInterior.png" alt="Loro Piana Interiors — Ventus" loading="lazy" />
+    </div>
+    <div class="feat-text">
+      <div class="feat-text-inner">
+        <div class="eyebrow rv">Interiors · Loro Piana</div>
+        <h2 class="rv">Every surface<br/><em>chosen.</em></h2>
+        <div class="gold-rule rv" style="margin:0 0 28px;"></div>
+        <p class="rv">Loro Piana Interiors brings three centuries of textile mastery to Ventus. Hand-woven cashmere wall coverings, reclaimed teak floors, Calacatta Oro marble, and Belgian linen — materials that hold light the way fine fabric holds colour.</p>
+        <p class="rv">Nothing is sourced for effect. Every specification is chosen for what it will feel like in twenty years, not twenty photographs.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature flip">
+    <div class="feat-img" data-parallax-sm>
+      <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/LPinterior2.jpg" alt="Loro Piana Interior Detail — Ventus" loading="lazy" />
+    </div>
+    <div class="feat-text">
+      <div class="feat-text-inner">
+        <div class="eyebrow rv">Interiors · Material Detail</div>
+        <h2 class="rv">Three centuries<br/>of <em>craft.</em></h2>
+        <div class="gold-rule rv" style="margin:0 0 28px;"></div>
+        <p class="rv">Each room in a Ventus villa is a considered accumulation of material intelligence. Loro Piana's ateliers select only what endures — hand-laid marble, bespoke joinery, and textiles woven to specifications that most manufacturers do not offer.</p>
+        <p class="rv">The result is an interior that improves with time. That rewards living in. That holds its distinction long after the photography is forgotten.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feat-img" data-parallax-sm>
+      <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/blue%20lighting.png" alt="Vargov Design · John Cullen Lighting — Ventus" loading="lazy" />
+    </div>
+    <div class="feat-text">
+      <div class="feat-text-inner">
+        <div class="eyebrow rv">Lighting · Vargov Design &amp; John Cullen</div>
+        <h2 class="rv">Where light becomes<br/><em>architecture.</em></h2>
+        <div class="gold-rule rv" style="margin:0 0 28px;"></div>
+        <p class="rv">Vargov Design — one of Europe's most sought-after architectural lighting studios — partners with John Cullen Lighting, London's definitive luxury lighting house since 1981, trusted by Claridge's, the Connaught, and some of the world's most significant private residences.</p>
+        <p class="rv">Together they deliver a twelve-scene lighting choreography across each Ventus villa: bespoke luminaires engineered to specification, concealed track systems invisible to the eye, and a programme that moves through the day — from the pale clarity of morning to the warmth of the late Indian Ocean evening.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature flip">
+    <div class="feat-img" data-parallax-sm>
+      <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Master.png" alt="Master Suite — Ventus Villa" loading="lazy" />
+    </div>
+    <div class="feat-text">
+      <div class="feat-text-inner">
+        <div class="eyebrow rv">The Master Suite</div>
+        <h2 class="rv">Wake to<br/><em>the ocean.</em></h2>
+        <div class="gold-rule rv" style="margin:0 0 28px;"></div>
+        <p class="rv">Floor-to-ceiling glass dissolves the boundary between the master suite and the Indian Ocean beyond. The bed is positioned so the first light of day arrives from the east — over water.</p>
+        <p class="rv">Private terrace, open-air shower, and a dressing room lined in Loro Piana's signature cashmere panel.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feat-img" data-parallax-sm>
+      <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/window.png" alt="Floor-to-ceiling view — Ventus" loading="lazy" />
+    </div>
+    <div class="feat-text">
+      <div class="feat-text-inner">
+        <div class="eyebrow rv">Sea View · Floor 3</div>
+        <h2 class="rv">The frame<br/>is the <em>horizon.</em></h2>
+        <div class="gold-rule rv" style="margin:0 0 28px;"></div>
+        <p class="rv">Ventus treats glass not as a wall but as a canvas. Three metres of uninterrupted glazing from floor to ceiling — each window a living painting of the east coast lagoon.</p>
+        <p class="rv">Structural glass fins eliminate visible frames at the corners, creating the sensation of standing in open air.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SEVEN VILLAS ══ -->
+  <section id="villas">
+    <div id="villas-header">
       <div>
-        <div style={{ fontFamily:'var(--H)',fontSize:10,fontWeight:300,letterSpacing:'0.4em',color:'var(--T3)',textTransform:'uppercase',marginBottom:4 }}>The Ventus Collection</div>
-        <div className="cap" style={{ fontSize:6.5,color:'var(--T3)',opacity:0.5 }}>Seven Private Coastal Residences · Grand Baie, Mauritius</div>
+        <div class="eyebrow rv">The Collection</div>
+        <h2 class="rv">Seven addresses.<br/><em>One island.</em></h2>
       </div>
-      <span className="cap" style={{ fontSize:6.5,color:'var(--T3)' }}>© 2026 · From £1,250,000</span>
-      <span className="cap" style={{ fontSize:6.5,color:'var(--T3)' }}>Permanent Residency Included</span>
-    </footer>
-  )
-}
+      <div class="villas-price rv">
+        <div class="from">Priced from</div>
+        <div class="amount">£1,250,000</div>
+      </div>
+    </div>
+    <div id="villas-list">
+      <div class="villa-row rv">
+        <div class="villa-row-num">I</div>
+        <div class="villa-row-name">Tempest</div>
+        <div class="villa-row-loc">East Coast, Mauritius</div>
+        <div class="villa-row-tag">4 Beds · 380m²</div>
+        <div class="villa-row-price">£1,250,000</div>
+        <div class="villa-row-cta">Enquire</div>
+      </div>
+      <div class="villa-row rv">
+        <div class="villa-row-num">II</div>
+        <div class="villa-row-name">Solstice</div>
+        <div class="villa-row-loc">East Coast, Mauritius</div>
+        <div class="villa-row-tag">4 Beds · 420m²</div>
+        <div class="villa-row-price">£1,390,000</div>
+        <div class="villa-row-cta">Enquire</div>
+      </div>
+      <div class="villa-row rv">
+        <div class="villa-row-num">III</div>
+        <div class="villa-row-name">Meridian</div>
+        <div class="villa-row-loc">East Coast, Mauritius</div>
+        <div class="villa-row-tag">4 Beds · 460m²</div>
+        <div class="villa-row-price">£1,480,000</div>
+        <div class="villa-row-cta">Enquire</div>
+      </div>
+      <div class="villa-row rv">
+        <div class="villa-row-num">IV</div>
+        <div class="villa-row-name">Equinox</div>
+        <div class="villa-row-loc">East Coast, Mauritius</div>
+        <div class="villa-row-tag">5 Beds · 550m²</div>
+        <div class="villa-row-price">£1,640,000</div>
+        <div class="villa-row-cta">Enquire</div>
+      </div>
+      <div class="villa-row rv">
+        <div class="villa-row-num">V</div>
+        <div class="villa-row-name">Sirocco</div>
+        <div class="villa-row-loc">East Coast, Mauritius</div>
+        <div class="villa-row-tag">5 Beds · 620m²</div>
+        <div class="villa-row-price">£1,850,000</div>
+        <div class="villa-row-cta">Enquire</div>
+      </div>
+      <div class="villa-row rv">
+        <div class="villa-row-num">VI</div>
+        <div class="villa-row-name">Calima</div>
+        <div class="villa-row-loc">East Coast, Mauritius</div>
+        <div class="villa-row-tag">5 Beds · 720m²</div>
+        <div class="villa-row-price">£2,100,000</div>
+        <div class="villa-row-cta">Enquire</div>
+      </div>
+      <div class="villa-row rv">
+        <div class="villa-row-num">VII</div>
+        <div class="villa-row-name">Aura</div>
+        <div class="villa-row-loc">East Coast, Mauritius</div>
+        <div class="villa-row-tag">5 Beds · 820m²</div>
+        <div class="villa-row-price">Price on Application</div>
+        <div class="villa-row-cta">Enquire</div>
+      </div>
+    </div>
+  </section>
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-export default function HomePage() {
-  return (
-    <>
-      <Styles />
-      <Curtain />
-      <Cursor />
-      <PBar />
-      <Nav />
+  <!-- ══ COLLECTOR'S GARAGE (with villas) ══ -->
+  <div id="garage-interlude" data-parallax>
+    <img
+      src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Garage.png"
+      alt="Collector's Garage — Ventus" loading="lazy"
+    />
+    <div id="garage-text" class="rv">
+      <p>Collector&apos;s Garage &middot; Included with Each Residence</p>
+      <h2>Built for those<br/>who collect<br/>the finest things.</h2>
+    </div>
+  </div>
 
-      {/* 1. DESIRE — Architectural beauty */}
-      <Hero />
+  <!-- PULLQUOTE 1 -->
+  <div class="pullquote" data-parallax>
+    <img class="pullquote-img" src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Sea%20view%202.png" alt="Ventus — Indian Ocean View" loading="lazy" />
+    <div class="pullquote-body rv">
+      <blockquote>"The rarest addresses are not found.<br/>They are recognised."</blockquote>
+      <cite>Ventus &middot; East Coast, Mauritius</cite>
+    </div>
+  </div>
 
-      {/* Cinematic arrival sequence */}
-      <Scene src={IMG.entrance}  label="Ventus I · Arrival"        caption="The estate reveals itself — unhurried, deliberate"      objPos="center 40%" />
-      <Scene src={IMG.window}    label="Ventus II · Elevation"      caption="Light held in a single frame, the ocean beyond"         objPos="center 50%" />
-      <Scene src={IMG.seaView2}  label="Ventus III · Core Estate"   caption="Architecture in perfect equilibrium with landscape"      objPos="center 35%" />
-      <Scene src={IMG.pool1}     label="Ventus IV · Infinity"       caption="Where the water ends and the horizon begins"            objPos="center 45%" />
+  <!-- ══ SETTING ══ -->
+  <section id="setting">
+    <div id="setting-inner">
+      <div>
+        <div class="eyebrow rv">The Location</div>
+        <h2 class="rv">Île aux Cerf<br/>at your <em>threshold.</em></h2>
+        <p class="rv">
+          Between Quatre Soeurs and Grand Baie — Ventus occupies one of the east coast's last genuinely private plots. Île aux Cerf, Mauritius's most celebrated coral island, is a five-minute boat crossing. The GRSE Waterfall reserve frames the inland boundary. Anahita Golf Resort, the Four Seasons, and the Shangri-La are all within a short drive.
+        </p>
+        <p class="rv">
+          This is a location that requires no compensation with amenity. The natural endowment alone — the lagoon, the reef, the turquoise clarity of the water — places Ventus among the most privileged addresses in the southern hemisphere.
+        </p>
+        <div class="setting-callouts rv">
+          <div class="setting-callout">
+            <div class="setting-callout-n">5 min</div>
+            <div class="setting-callout-l">To Île aux Cerf by boat —<br/>Mauritius's finest coral island</div>
+          </div>
+          <div class="setting-callout">
+            <div class="setting-callout-n">330</div>
+            <div class="setting-callout-l">Days of sunshine per year —<br/>East Coast Mauritius average</div>
+          </div>
+          <div class="setting-callout">
+            <div class="setting-callout-n">27°</div>
+            <div class="setting-callout-l">Average Indian Ocean temperature<br/>year-round</div>
+          </div>
+        </div>
+      </div>
+      <div id="setting-right" class="rv">
+        <div class="setting-img-main setting-map">
+          <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Screenshot%202026-05-16%20222718.png" alt="Ventus — East Coast Location, Mauritius" loading="lazy" />
+          <div class="map-overlay">
+            <div class="map-coord">20°07′S &nbsp; 57°39′E</div>
+            <div class="map-label">East Coast, Mauritius</div>
+          </div>
+        </div>
+        <div class="setting-img-accent"></div>
+      </div>
+    </div>
+  </section>
 
-      {/* 2. COLLECTION INTRO */}
-      <VentusIntro />
-      <Specs />
+  <!-- PULLQUOTE 2 -->
+  <div class="pullquote" data-parallax>
+    <img class="pullquote-img" src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/LPinterior3.png" alt="Loro Piana Interior — Ventus" loading="lazy" />
+    <div class="pullquote-body rv">
+      <blockquote>"Not merely a home.<br/>A permanent address in the world's<br/>most tax-efficient paradise."</blockquote>
+      <cite>Permanent Residence Permit included &middot; From £1,250,000</cite>
+    </div>
+  </div>
 
-      {/* 3. IMAGINATION — Living inside Ventus */}
-      <Panel src={IMG.seaVIew}   eyebrow="The Estate · Designed to disappear" title="Architecture that serves the view, not itself" sub="Every orientation calibrated to the ocean. Every opening framed by sky." />
-      <Panel src={IMG.seaView}   eyebrow="Interior · Material Permanence"     title="Every surface chosen"        sub="Reclaimed teak. Calacatta Oro. Belgian linen — nothing left to chance." align="right" dim={0.5} />
-      <Panel src={IMG.pool2}     eyebrow="Blue Hour · The Pool"                title="The pool at dusk"            sub="Salt air. Candlelight. The horizon on fire." align="center" dim={0.42} />
+  <!-- ══ WELLNESS ══ -->
+  <section id="wellness">
+    <div id="wellness-head">
+      <div>
+        <div class="eyebrow rv">Shared Wellness Sanctuary · KLAF Design</div>
+        <h2 class="rv">The Wellness<br/><em>Sanctuary.</em></h2>
+      </div>
+      <p class="rv">
+        Descend &middot; Restore &middot; Transcend.<br/><br/>
+        The Ventus Wellness Sanctuary is a shared privilege of all seven resident families — a dedicated facility of extraordinary depth, conceived entirely by the KLAF Design Team, specialists in sensory wellness architecture who approach every room as a ritual space.
+      </p>
+    </div>
 
-      {/* Villa Sequence */}
-      <VillaSequence />
+    <div class="spa-chapter">
+      <div class="spa-chapter-img" data-parallax-sm>
+        <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Spa%20Entry.png" alt="Spa Entry — Ventus" loading="lazy" />
+      </div>
+      <div class="spa-chapter-body">
+        <div class="spa-chapter-body-inner">
+          <div class="eyebrow rv">The Descent</div>
+          <h3 class="rv">Ancient healing<br/>reborn in <em>volcanic stone.</em></h3>
+          <p class="rv">The spa begins before the first treatment. The approach — a corridor of black basalt and diffused amber light — signals to the body that something is about to change.</p>
+          <p class="rv">Mauritius's indigenous healing traditions, reinterpreted by KLAF in materials that speak of permanence and calm.</p>
+        </div>
+      </div>
+    </div>
 
-      <Quote text="The rarest addresses are not found. They are recognised." attr="The Ventus Collection · Grand Baie, Mauritius" />
+    <div class="spa-chapter flip">
+      <div class="spa-chapter-img" data-parallax-sm>
+        <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/DSC04815-Enhanced-NR-Edit-Edit-Edit-min.jpg" alt="Himalayan Pink Salt Sauna — Ventus KLAF Design" loading="lazy" />
+      </div>
+      <div class="spa-chapter-body">
+        <div class="spa-chapter-body-inner">
+          <div class="eyebrow rv">The Salt Chamber</div>
+          <h3 class="rv"><em>Himalayan</em> Pink Salt<br/>Sauna</h3>
+          <p class="rv">Hand-carved walls of ancient pink Himalayan salt — 250 million years of geological memory brought into a room of pure silence. Negative ion emission. Natural halotherapy.</p>
+          <p class="rv">The salt is sourced from the Khewra mines of northern Pakistan — the same origin used by the world's finest wellness retreats. Custom-cut and set by KLAF's craftsmen.</p>
+        </div>
+      </div>
+    </div>
 
-      {/* Island context */}
-      <Scene src={IMG.outdoor}   label="The Setting · Grand Baie"  caption="Minutes from one of the world's last untouched lagoons"  objPos="center 30%" />
-      <Island />
+    <div class="spa-chapter">
+      <div class="spa-chapter-img" data-parallax-sm>
+        <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Spa%202.png" alt="Chromatherapy Pool — Ventus" loading="lazy" />
+      </div>
+      <div class="spa-chapter-body">
+        <div class="spa-chapter-body-inner">
+          <div class="eyebrow rv">Chromatherapy</div>
+          <h3 class="rv">Light as<br/><em>medicine.</em></h3>
+          <p class="rv">Seven chromatic states, each calibrated to the body's natural energy centres. From deep indigo calm to amber vitality — the pool shifts its frequency with you.</p>
+          <p class="rv">The chromatherapy programme was developed exclusively for Ventus by KLAF in collaboration with a Zurich-based medical wellness consultancy.</p>
+        </div>
+      </div>
+    </div>
 
-      {/* Loro Piana Interiors */}
-      <LoroPianaInteriors />
+    <div class="spa-chapter flip">
+      <div class="spa-chapter-img" data-parallax-sm>
+        <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Spa%203.jpg" alt="Deep Restoration — Ventus Spa" loading="lazy" />
+      </div>
+      <div class="spa-chapter-body">
+        <div class="spa-chapter-body-inner">
+          <div class="eyebrow rv">Deep Restoration</div>
+          <h3 class="rv">Total silence.<br/><em>Total surrender.</em></h3>
+          <p class="rv">Aromatherapy ritual rooms with botanical diffusion systems. Bespoke scent programmes drawn from indigenous Mauritian flora — ylang-ylang, vetiver, vanilla.</p>
+          <p class="rv">The final room in the KLAF sequence is one of complete stillness. The Indian Ocean trade winds carry scent through louvred stone.</p>
+        </div>
+      </div>
+    </div>
 
-      {/* Helicopter Arrival */}
-      <HelicopterArrival />
+    <div id="spa-amenities">
+      <div class="spa-am-cell rv">
+        <div class="spa-am-title">Hydrotherapy</div>
+        <ul class="spa-am-items">
+          <li>Heated jet pool</li><li>Cold plunge bath</li>
+          <li>Mineral steam room</li><li>Contrast therapy circuit</li>
+        </ul>
+      </div>
+      <div class="spa-am-cell rv">
+        <div class="spa-am-title">Body Rituals</div>
+        <ul class="spa-am-items">
+          <li>Volcanic stone massage</li><li>Coconut &amp; island botanicals</li>
+          <li>Ayurvedic treatments</li><li>Bespoke scent ritual</li>
+        </ul>
+      </div>
+      <div class="spa-am-cell rv">
+        <div class="spa-am-title">Movement</div>
+        <ul class="spa-am-items">
+          <li>Sunrise yoga pavilion</li><li>Sunset meditation deck</li>
+          <li>Resident wellness director</li><li>Private training available</li>
+        </ul>
+      </div>
+      <div class="spa-am-cell rv">
+        <div class="spa-am-title">Nutrition</div>
+        <ul class="spa-am-items">
+          <li>Ayurvedic cuisine programme</li><li>Plant-based daily menu</li>
+          <li>Private chef on request</li><li>Mauritian botanical teas</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
-      <Quote text="Not merely a home. A permanent address in the world's most tax-efficient paradise." attr="Permanent Residence Permit included · From £1,250,000" />
+  <!-- ══ DINING ══ -->
+  <section id="dining">
+    <div id="dining-header">
+      <div>
+        <div class="eyebrow rv">Culinary Excellence</div>
+        <h2 class="rv">A five-star table<br/>above the <em>Indian Ocean.</em></h2>
+      </div>
+      <p class="rv">
+        Two dining experiences. One philosophy — the pursuit of the extraordinary. A Michelin-calibre Japanese restaurant at sea level, and a rooftop bar above the lagoon. Both exclusive to Ventus residents and their guests.
+      </p>
+    </div>
 
-      {/* 4. TRUST — Wellness & Restoration */}
-      <WellnessDescent />
-      <Wellness />
+    <!-- Restaurant -->
+    <div class="dining-panel">
+      <div class="dining-panel-img" data-parallax-sm>
+        <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/Screenshot%202026-05-16%20213211.png" alt="Ventus — Japanese Restaurant" loading="lazy" />
+      </div>
+      <div class="dining-panel-body">
+        <div class="dining-panel-inner">
+          <div class="eyebrow rv">The Restaurant</div>
+          <h3 class="rv">Japanese <em>Omakase</em><br/>at the water's edge.</h3>
+          <p class="rv">
+            An intimate twelve-seat omakase counter and a wider dining room of thirty covers, presided over by a chef with fifteen years at Japan's finest kaiseki houses. The menu follows the tides: what is caught that morning defines what is served that evening.
+          </p>
+          <p class="rv">
+            Bluefin from the Maldivian line. Wagyu brought weekly. Sake and Japanese whisky curated by a sommelier who trained in Kyoto. The most considered table on the east coast of Mauritius.
+          </p>
+          <div class="dining-tags rv">
+            <span class="dining-tag">Omakase Counter</span>
+            <span class="dining-tag">Private Dining</span>
+            <span class="dining-tag">Sake Cellar</span>
+            <span class="dining-tag">Residents Only</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      {/* 5. TRUST — Investment data */}
-      <InvestmentInfographics />
+    <!-- Rooftop Bar -->
+    <div id="rooftop-interlude" data-parallax>
+      <img src="https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/roof%20top%20bar.png" alt="Ventus — Rooftop Bar" loading="lazy" />
+      <div id="rooftop-body">
+        <div class="eyebrow rv">The Rooftop</div>
+        <h2 class="rv">Cocktails at<br/>the edge of everything.</h2>
+        <p class="desc rv">
+          Above the restaurant, above the lagoon, above the world — the Ventus rooftop bar is open from sundown to the small hours. Japanese-inspired cocktails, rare whisky, and the east coast horizon burning gold then black. A perch for those who appreciate the finest view in the Indian Ocean.
+        </p>
+      </div>
+    </div>
 
-      {/* 6. COMMITMENT — Contact */}
-      <Contact />
-      <Footer />
-    </>
-  )
-}
+  </section>
+
+  <!-- ══ MARKET INTELLIGENCE ══ -->
+  <section id="invest">
+    <div id="invest-inner">
+      <div id="invest-header">
+        <div>
+          <div class="eyebrow rv">Market Intelligence</div>
+          <h2 class="rv">Mauritius. The soundest<br/>address in the<br/><em>Indian Ocean.</em></h2>
+        </div>
+        <div>
+          <p class="rv">Five reasons converge into one irrefutable argument: capital appreciation, rental income, permanent residency, zero capital gains, and a way of life unavailable anywhere else on earth.</p>
+          <p class="rv" style="margin-top:16px;font-size:.78rem;color:var(--mute);">Ventus qualifies under the Mauritius Smart City Scheme — granting permanent residency to buyers and their dependants upon completion.</p>
+        </div>
+      </div>
+
+      <!-- Big 4 metrics -->
+      <div id="invest-metrics">
+        <div class="im-cell rv">
+          <div class="im-cell-l">GDP Growth Rate</div>
+          <div class="im-cell-v">6.8<span class="u">%</span></div>
+          <div class="im-cell-d">Mauritius 2024 GDP growth — IMF. Among the strongest in Africa.</div>
+          <div class="im-cell-bar"></div>
+        </div>
+        <div class="im-cell rv">
+          <div class="im-cell-l">RPPI Annual Growth</div>
+          <div class="im-cell-v">+12<span class="u">%</span></div>
+          <div class="im-cell-d">Residential Property Price Index. Q4 2024, Statistics Mauritius.</div>
+          <div class="im-cell-bar"></div>
+        </div>
+        <div class="im-cell rv">
+          <div class="im-cell-l">Luxury Rental Yield</div>
+          <div class="im-cell-v">5–9<span class="u">%</span></div>
+          <div class="im-cell-d">Average gross yield for luxury coastal villas, eastern Mauritius.</div>
+          <div class="im-cell-bar"></div>
+        </div>
+        <div class="im-cell rv">
+          <div class="im-cell-l">Capital Gains Tax</div>
+          <div class="im-cell-v">0<span class="u">%</span></div>
+          <div class="im-cell-d">Zero CGT, zero inheritance tax, zero wealth tax for property owners.</div>
+          <div class="im-cell-bar"></div>
+        </div>
+      </div>
+
+      <!-- Tourism & FDI infographics -->
+      <div id="invest-infograph">
+        <div class="ig-cell rv">
+          <div class="ig-eyebrow">Tourism Arrivals</div>
+          <div class="ig-number">1.4<span class="u">M</span></div>
+          <div class="ig-label">International visitors in 2024 — a record high. The east coast commands the highest nightly rates on the island.</div>
+          <div class="ig-ring">
+            <svg viewBox="0 0 60 60">
+              <circle class="ring-track" cx="30" cy="30" r="26"/>
+              <circle class="ring-fill" cx="30" cy="30" r="26" data-pct="88"/>
+            </svg>
+          </div>
+        </div>
+        <div class="ig-cell rv">
+          <div class="ig-eyebrow">Foreign Direct Investment</div>
+          <div class="ig-number">$1.2<span class="u">B</span></div>
+          <div class="ig-label">FDI inflows 2024 — real estate sector leads, driven by IRS and Smart City schemes attracting global HNW buyers.</div>
+          <div class="ig-ring">
+            <svg viewBox="0 0 60 60">
+              <circle class="ring-track" cx="30" cy="30" r="26"/>
+              <circle class="ring-fill" cx="30" cy="30" r="26" data-pct="72"/>
+            </svg>
+          </div>
+        </div>
+        <div class="ig-cell rv">
+          <div class="ig-eyebrow">Private Wealth Growth</div>
+          <div class="ig-number">+67<span class="u">%</span></div>
+          <div class="ig-label">Total investable wealth growth, Mauritius 2015–2025. Africa's strongest decade of private wealth appreciation.</div>
+          <div class="ig-ring">
+            <svg viewBox="0 0 60 60">
+              <circle class="ring-track" cx="30" cy="30" r="26"/>
+              <circle class="ring-fill" cx="30" cy="30" r="26" data-pct="67"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- RPPI Chart -->
+      <div id="rppi-wrap" class="rv">
+        <h3>Residential Property Price Index</h3>
+        <p id="rppi-sub">Statistics Mauritius &middot; 2017–2024 &middot; Base year 2017 = 100</p>
+        <div id="rppi-bars">
+          <div class="rppi-col"><div class="rppi-val">100</div><div class="rppi-bar" data-h="38"></div><div class="rppi-yr">2017</div></div>
+          <div class="rppi-col"><div class="rppi-val">104</div><div class="rppi-bar" data-h="42"></div><div class="rppi-yr">2018</div></div>
+          <div class="rppi-col"><div class="rppi-val">109</div><div class="rppi-bar" data-h="47"></div><div class="rppi-yr">2019</div></div>
+          <div class="rppi-col"><div class="rppi-val">107</div><div class="rppi-bar" data-h="44"></div><div class="rppi-yr">2020</div></div>
+          <div class="rppi-col"><div class="rppi-val">111</div><div class="rppi-bar" data-h="50"></div><div class="rppi-yr">2021</div></div>
+          <div class="rppi-col"><div class="rppi-val">120</div><div class="rppi-bar" data-h="60"></div><div class="rppi-yr">2022</div></div>
+          <div class="rppi-col"><div class="rppi-val">132</div><div class="rppi-bar" data-h="74"></div><div class="rppi-yr">2023</div></div>
+          <div class="rppi-col"><div class="rppi-val">147</div><div class="rppi-bar peak" data-h="92"></div><div class="rppi-yr">2024</div></div>
+        </div>
+      </div>
+
+      <!-- Investment reasons -->
+      <div id="invest-reasons" style="margin-top:2px;">
+        <div class="ir-cell rv">
+          <div class="ir-cell-head">Price Appreciation</div>
+          <div class="ir-cell-title">8–12% forecast<br/><em>growth 2026</em></div>
+          <div class="ir-cell-body">VEFA off-plan buyers lock in 30–60% below completed unit value. Bank-backed guarantees protect your deposit from day one.</div>
+        </div>
+        <div class="ir-cell rv">
+          <div class="ir-cell-head">Permanent Residency</div>
+          <div class="ir-cell-title">Family PRP from<br/><em>£1.25M</em></div>
+          <div class="ir-cell-body">Buyer, spouse, and all dependants. Valid for the duration of ownership. 20-year renewable status.</div>
+        </div>
+        <div class="ir-cell rv">
+          <div class="ir-cell-head">Tax Position</div>
+          <div class="ir-cell-title"><em>0%</em> CGT ·<br/>0% Estate Tax</div>
+          <div class="ir-cell-body">No capital gains, no inheritance tax, no annual property tax. Full profit repatriation. DTA with 46 countries.</div>
+        </div>
+        <div class="ir-cell rv">
+          <div class="ir-cell-head">Act Before July 2026</div>
+          <div class="ir-cell-title">Registration duty<br/><em>doubles</em></div>
+          <div class="ir-cell-body">Non-citizen duty rises 5% → 10% on 1 July 2026. Reserve now under the Smart City Scheme and save significantly.</div>
+        </div>
+        <div class="ir-cell rv">
+          <div class="ir-cell-head">Wealth Growth</div>
+          <div class="ir-cell-title"><em>+67%</em><br/>decade growth</div>
+          <div class="ir-cell-body">Total investable wealth, Mauritius 2015–2025. Africa's strongest decade of private wealth appreciation.</div>
+        </div>
+      </div>
+
+      <div id="deadline">
+        <div id="deadline-left">
+          <h4>Buy before <em>1 July 2026.</em></h4>
+          <p>Registration duty for non-citizens doubles from 5% to 10% on 1 July 2026.<br/>Reserving under the Smart City Scheme now protects you at the lower rate.</p>
+        </div>
+        <a href="#contact" class="deadline-arrow">Request Investment Brief →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ VEFA — OFF-PLAN PURCHASE JOURNEY ══ -->
+  <section id="vefa">
+    <div id="vefa-inner">
+      <div id="vefa-header">
+        <div class="eyebrow rv">VEFA · Off-Plan Purchase</div>
+        <h2 class="rv">Your investment,<br/>stage by stage.<br/><em>Every step protected.</em></h2>
+        <p class="rv">
+          VEFA (Vente en l'État Futur d'Achèvement) is Mauritius's off-plan purchase framework — a staged payment structure where your funds are released only as construction milestones are independently verified. At every stage, a bank guarantee protects your capital. You are buying a future address at today's price, with tomorrow's growth locked in from the day you sign.
+        </p>
+      </div>
+
+      <div id="vefa-timeline">
+        <div class="vefa-step lit rv">
+          <div class="vefa-step-dot"></div>
+          <div class="vefa-step-ghost">01</div>
+          <div class="vefa-step-pct">10%</div>
+          <div class="vefa-step-label">Reservation</div>
+          <div class="vefa-step-body">Secure your villa with a 10% reservation deposit. Your price is fixed on this date — no future uplift applies to your reservation.</div>
+          <div class="vefa-step-guar">Bank guarantee issued</div>
+        </div>
+        <div class="vefa-step rv">
+          <div class="vefa-step-dot"></div>
+          <div class="vefa-step-ghost">02</div>
+          <div class="vefa-step-pct">20%</div>
+          <div class="vefa-step-label">Foundation Complete</div>
+          <div class="vefa-step-body">Second stage payment released upon independent certification that foundation and substructure works are complete.</div>
+          <div class="vefa-step-guar">Notarised milestone</div>
+        </div>
+        <div class="vefa-step rv">
+          <div class="vefa-step-dot"></div>
+          <div class="vefa-step-ghost">03</div>
+          <div class="vefa-step-pct">20%</div>
+          <div class="vefa-step-label">Walls &amp; Structure</div>
+          <div class="vefa-step-body">Third payment on verified completion of structural walls, columns, and load-bearing frame — your villa takes physical shape.</div>
+          <div class="vefa-step-guar">Independent surveyor</div>
+        </div>
+        <div class="vefa-step rv">
+          <div class="vefa-step-dot"></div>
+          <div class="vefa-step-ghost">04</div>
+          <div class="vefa-step-pct">15%</div>
+          <div class="vefa-step-label">Roof &amp; Envelope</div>
+          <div class="vefa-step-body">Fourth stage triggered by completion of the roof, exterior cladding, and weatherproofed envelope. Interior works begin.</div>
+          <div class="vefa-step-guar">Bank guarantee active</div>
+        </div>
+        <div class="vefa-step rv">
+          <div class="vefa-step-dot"></div>
+          <div class="vefa-step-ghost">05</div>
+          <div class="vefa-step-pct">35%</div>
+          <div class="vefa-step-label">Completion &amp; Keys</div>
+          <div class="vefa-step-body">Final payment on delivery of your completed villa, Certificate of Conformity issued, and title deed transferred. Your address is yours.</div>
+          <div class="vefa-step-guar">Title transferred</div>
+        </div>
+      </div>
+
+      <div id="vefa-guarantees">
+        <div class="vg-cell rv">
+          <div class="vg-icon">§</div>
+          <div class="vg-title">Bank-Backed Deposit Guarantee</div>
+          <div class="vg-body">Every stage payment is protected by a first-demand bank guarantee issued by a Mauritius-licensed bank. If construction halts for any reason, your capital is returned in full within 30 days. No conditions. No arguments.</div>
+        </div>
+        <div class="vg-cell rv">
+          <div class="vg-icon">◈</div>
+          <div class="vg-title">Notarised Price Lock</div>
+          <div class="vg-body">Your purchase price is fixed on the day you sign the VEFA agreement and registered with the Mauritius Registrar of Companies. No price escalation clauses. No hidden surcharges. The price you agree today is the price you pay at completion.</div>
+        </div>
+        <div class="vg-cell rv">
+          <div class="vg-icon">⌘</div>
+          <div class="vg-title">Smart City Scheme Benefits</div>
+          <div class="vg-body">Ventus qualifies under the Smart City Scheme, granting buyers who complete before 1 July 2026 the lower 5% registration duty, permanent residency for the family, and access to all Smart City fiscal incentives — including corporate tax holidays for qualifying activities.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CONTACT ══ -->
+  <section id="contact">
+    <div id="contact-inner">
+      <div id="contact-left">
+        <div class="eyebrow rv">Private Viewing</div>
+        <h2 class="rv">Arrange a<br/><em>private appointment.</em></h2>
+        <p class="rv">All seven Ventus villas are available by private appointment only. Our advisors are reachable around the clock and there are no intermediaries — every enquiry is handled personally.</p>
+        <div class="contact-details rv">
+          <div>
+            <div class="cd-label">Development Office</div>
+            <div class="cd-val">East Coast, Mauritius</div>
+          </div>
+          <div>
+            <div class="cd-label">Enquiries</div>
+            <div class="cd-val">residences@ventus.mu</div>
+          </div>
+          <div>
+            <div class="cd-label">Investment Memorandum</div>
+            <div class="cd-val">Available upon qualification</div>
+          </div>
+        </div>
+        <a href="#" class="btn rv"><span>Submit Enquiry</span></a>
+      </div>
+      <div class="rv">
+        <form class="form" onsubmit="return false;">
+          <div class="frow">
+            <div class="ff"><label class="fl">First Name</label><input type="text" class="fi" placeholder="Given name" /></div>
+            <div class="ff"><label class="fl">Surname</label><input type="text" class="fi" placeholder="Family name" /></div>
+          </div>
+          <div class="frow">
+            <div class="ff"><label class="fl">Email</label><input type="email" class="fi" placeholder="Private address" /></div>
+            <div class="ff"><label class="fl">Country</label><input type="text" class="fi" placeholder="Residence" /></div>
+          </div>
+          <div class="ff full">
+            <label class="fl">Villa of Interest</label>
+            <select class="fsel">
+              <option value="">Select a residence</option>
+              <option>Villa I — Tempest · £1,250,000</option>
+              <option>Villa II — Solstice · £1,390,000</option>
+              <option>Villa III — Meridian · £1,480,000</option>
+              <option>Villa IV — Equinox · £1,640,000</option>
+              <option>Villa V — Sirocco · £1,850,000</option>
+              <option>Villa VI — Calima · £2,100,000</option>
+              <option>Villa VII — Aura · POA</option>
+              <option>Open to all residences</option>
+            </select>
+          </div>
+          <div class="ff full">
+            <label class="fl">Message</label>
+            <textarea class="fta" placeholder="Tell us about your requirements..."></textarea>
+          </div>
+          <div style="margin-top:8px;">
+            <button type="submit" class="btn"><span>Submit Enquiry</span></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand-name">VENTUS</div>
+        <p class="footer-brand-p">Seven boutique villas. East Coast, Mauritius. Indian Ocean.</p>
+        <p class="footer-brand-p" style="margin-top:16px;">Architecture · SAOTA<br/>Interiors · Loro Piana<br/>Lighting · Vargov Design<br/>Wellness · KLAF Design Team</p>
+      </div>
+      <div>
+        <div class="footer-col-head">The Villas</div>
+        <ul class="footer-links">
+          <li><a href="#">I — Tempest</a></li><li><a href="#">II — Solstice</a></li>
+          <li><a href="#">III — Meridian</a></li><li><a href="#">IV — Equinox</a></li>
+          <li><a href="#">V — Sirocco</a></li><li><a href="#">VI — Calima</a></li>
+          <li><a href="#">VII — Aura</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-head">The Experience</div>
+        <ul class="footer-links">
+          <li><a href="#">Architecture</a></li><li><a href="#">Interiors</a></li>
+          <li><a href="#">Lighting</a></li><li><a href="#">Wellness</a></li>
+          <li><a href="#">Dining</a></li><li><a href="#">Mauritius</a></li>
+          <li><a href="#">Investment</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-head">Contact</div>
+        <ul class="footer-links">
+          <li><a href="#">Private Enquiry</a></li><li><a href="#">Investment Memorandum</a></li>
+          <li><a href="#">Arrange a Viewing</a></li><li><a href="#">VEFA Guide</a></li>
+          <li><a href="#" style="color:var(--mute);margin-top:8px;display:block;">residences@ventus.mu</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 VENTUS Residences Ltd · East Coast, Mauritius · Smart City Scheme</div>
+      <div class="footer-legal-links">
+        <a href="#">Privacy</a><a href="#">Legal</a><a href="#">GDPR</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* ── Cursor ── */
+  const cur  = document.getElementById('cur');
+  const ring = document.getElementById('cur-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    gsap.to(cur, { x: mx, y: my, duration: .07, ease: 'none' });
+  });
+  (function loop() {
+    rx += (mx - rx) * .1; ry += (my - ry) * .1;
+    gsap.set(ring, { x: rx, y: ry });
+    requestAnimationFrame(loop);
+  })();
+  document.querySelectorAll('a,button,.villa-row,.dining-tag').forEach(el => {
+    el.addEventListener('mouseenter', () => { gsap.to(cur, { width:18, height:18, duration:.3 }); gsap.to(ring, { width:56, height:56, duration:.3 }); });
+    el.addEventListener('mouseleave', () => { gsap.to(cur, { width:8,  height:8,  duration:.3 }); gsap.to(ring, { width:32, height:32, duration:.3 }); });
+  });
+
+  /* ── Loader ── */
+  const ldr  = document.getElementById('loader');
+  const logo = document.getElementById('loader-logo');
+  gsap.to(logo, { opacity: 1, duration: 1, delay: .3, ease: 'power2.out' });
+  gsap.to(ldr,  {
+    opacity: 0, duration: .7, delay: 2.1, ease: 'power2.inOut',
+    onComplete() { ldr.style.display = 'none'; startHero(); }
+  });
+
+  function startHero() {
+    const tl = gsap.timeline();
+    tl.from('#hero-title',    { opacity: 0, y: 60, letterSpacing: '1em', duration: 1.6, ease: 'expo.out' })
+      .from('#hero-badge',    { opacity: 0, y: 20, duration: .9, ease: 'power2.out' }, '-=.9')
+      .from('#hero-location', { opacity: 0, y: 16, duration: .8, ease: 'power2.out' }, '-=.7')
+      .from('#hero-sub-loc',  { opacity: 0, y: 12, duration: .7, ease: 'power2.out' }, '-=.6')
+      .from('#hero-ctas',     { opacity: 0, y: 20, duration: .9, ease: 'power2.out' }, '-=.5')
+      .from('#hero-yield',    { opacity: 0, x: 30, duration: .9, ease: 'power2.out' }, '-=.7')
+      .from('#scroll-hint',   { opacity: 0, duration: .6, ease: 'power2.out' }, '-=.4');
+  }
+
+  /* ── Hero: image parallax + overlay darkens on scroll ── */
+  gsap.to('#hero-img', {
+    scale: 1.06, y: '6%', ease: 'none',
+    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: 1.2 }
+  });
+  gsap.to('#hero-dark', {
+    opacity: .78, ease: 'power1.in',
+    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: .8 }
+  });
+
+  /* ── Nav solid ── */
+  ScrollTrigger.create({
+    start: 'top -60',
+    onUpdate: s => document.getElementById('nav').classList.toggle('solid', s.scroll() > 60)
+  });
+
+  /* ── Chapter parallax ── */
+  document.querySelectorAll('.chapter[data-parallax]').forEach(ch => {
+    const img = ch.querySelector('.chapter-img');
+    gsap.fromTo(img,
+      { y: '-6%' },
+      { y: '18%', ease: 'none',
+        scrollTrigger: { trigger: ch, start: 'top bottom', end: 'bottom top', scrub: 1.4 }
+      }
+    );
+  });
+
+  /* ── Feature / spa / dining image parallax ── */
+  document.querySelectorAll('[data-parallax-sm]').forEach(wrap => {
+    const img = wrap.querySelector('img');
+    if (!img) return;
+    gsap.fromTo(img,
+      { y: '-6%' },
+      { y: '14%', ease: 'none',
+        scrollTrigger: { trigger: wrap, start: 'top bottom', end: 'bottom top', scrub: 1 }
+      }
+    );
+  });
+
+  /* ── Full-bleed interlude parallax ── */
+  ['#lp-interlude','#garage-interlude','#rooftop-interlude'].forEach(sel => {
+    const el  = document.querySelector(sel);
+    if (!el) return;
+    const img = el.querySelector('img');
+    gsap.fromTo(img,
+      { y: '-10%' },
+      { y: '16%', ease: 'none',
+        scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1.3 }
+      }
+    );
+  });
+
+  /* ── Pullquote parallax ── */
+  document.querySelectorAll('.pullquote[data-parallax]').forEach(pq => {
+    const img = pq.querySelector('.pullquote-img');
+    gsap.fromTo(img,
+      { y: '-10%' },
+      { y: '18%', ease: 'none',
+        scrollTrigger: { trigger: pq, start: 'top bottom', end: 'bottom top', scrub: 1.3 }
+      }
+    );
+  });
+
+  /* ── Scroll reveals — staggered by section ── */
+  gsap.utils.toArray('.rv').forEach((el, i) => {
+    gsap.fromTo(el,
+      { opacity: 0, y: 32 },
+      {
+        opacity: 1, y: 0, duration: 1.1, ease: 'power3.out',
+        scrollTrigger: {
+          trigger: el, start: 'top 88%',
+          toggleActions: 'play none none none'
+        }
+      }
+    );
+  });
+
+  /* ── Villa rows — stagger on enter ── */
+  ScrollTrigger.create({
+    trigger: '#villas-list', start: 'top 80%',
+    onEnter() {
+      gsap.to('.villa-row', {
+        opacity: 1, y: 0, duration: .7, ease: 'power3.out',
+        stagger: .08
+      });
+    }
+  });
+
+  /* ── RPPI bars ── */
+  ScrollTrigger.create({
+    trigger: '#rppi-wrap', start: 'top 80%',
+    onEnter() {
+      document.querySelectorAll('.rppi-bar').forEach((b, i) => {
+        gsap.to(b, {
+          height: b.dataset.h + '%',
+          duration: 1.4, delay: i * .1, ease: 'power3.out'
+        });
+      });
+    }
+  });
+
+  /* ── Metric cell bars ── */
+  gsap.utils.toArray('.im-cell').forEach(cell => {
+    ScrollTrigger.create({
+      trigger: cell, start: 'top 85%',
+      onEnter: () => cell.classList.add('in')
+    });
+  });
+
+  /* ── Infograph rings ── */
+  gsap.utils.toArray('.ig-cell').forEach(cell => {
+    const ring = cell.querySelector('.ring-fill');
+    const pct  = ring ? +ring.dataset.pct : 0;
+    ScrollTrigger.create({
+      trigger: cell, start: 'top 80%',
+      onEnter() {
+        cell.classList.add('in');
+        if (ring) {
+          const full = 163;
+          gsap.to(ring, {
+            strokeDashoffset: full - (full * pct / 100),
+            duration: 2, delay: .3, ease: 'power3.out'
+          });
+        }
+      }
+    });
+  });
+
+  /* ── VEFA dot lights ── */
+  gsap.utils.toArray('.vefa-step').forEach((step, i) => {
+    ScrollTrigger.create({
+      trigger: step, start: 'top 80%',
+      onEnter: () => step.classList.add('lit')
+    });
+  });
+
+  /* ── VEFA guarantee top-line draw ── */
+  gsap.utils.toArray('.vg-cell').forEach(cell => {
+    ScrollTrigger.create({
+      trigger: cell, start: 'top 82%',
+      onEnter: () => cell.classList.add('in')
+    });
+  });
+
+  /* ── Section dots ── */
+  const dotMap = [
+    { el: '#hero',     dot: 0 },
+    { el: '#chapters', dot: 1 },
+    { el: '#villas',   dot: 2 },
+    { el: '#wellness', dot: 3 },
+    { el: '#dining',   dot: 4 },
+    { el: '#invest',   dot: 5 },
+    { el: '#contact',  dot: 6 },
+  ];
+  const dots = document.querySelectorAll('.dot');
+  dotMap.forEach(({ el, dot }) => {
+    ScrollTrigger.create({
+      trigger: el, start: 'top 55%', end: 'bottom 45%',
+      onEnter:     () => dots.forEach((d,i) => d.classList.toggle('on', i === dot)),
+      onEnterBack: () => dots.forEach((d,i) => d.classList.toggle('on', i === dot)),
+    });
+  });
+
+  /* ── Reduced motion ── */
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    gsap.globalTimeline.timeScale(0);
+    document.querySelectorAll('.rv').forEach(e => { e.style.opacity = 1; e.style.transform = 'none'; });
+  }
+  </script>
+</body>
+</html>
