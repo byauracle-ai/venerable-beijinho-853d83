@@ -8,30 +8,216 @@ export const Route = createFileRoute('/')({
 const BASE = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/public'
 const img = (f: string) => `${BASE}/${encodeURIComponent(f)}`
 
-// ── Hero is now McClean ──────────────────────────────────────────────────────
-const HERO_IMG   = img('Modern-Dream-House-McClean-Design-09-1-Kindesign')
-const SECOND_IMG = img('Screenshot 2026-03-21 175630.png')
-const THIRD_IMG  = img('Screenshot 2026-05-14 202045.png')
-const STAIRCASE  = img('Screenshot 2026-05-11 171922.png')
+// ─── Mouse parallax hook ──────────────────────────────────────────────────────
+function useMouseParallax(strength = 12) {
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      setPos({
+        x: (e.clientX / window.innerWidth  - 0.5),
+        y: (e.clientY / window.innerHeight - 0.5),
+      })
+    }
+    window.addEventListener('mousemove', fn, { passive: true })
+    return () => window.removeEventListener('mousemove', fn)
+  }, [])
+  return {
+    imgStyle: { transform: `translate(${pos.x * -strength}px, ${pos.y * -strength * 0.6}px)` },
+    textStyle: { transform: `translate(${pos.x * 5}px, ${pos.y * 3}px)` },
+  }
+}
 
-const GALLERY = [
-  { src: img('Screenshot 2026-05-14 201935.png'), label: 'Living',  title: 'Open-Plan Living',  sub: 'Floor-to-ceiling glass dissolving interior and ocean into one' },
-  { src: img('Screenshot 2026-05-14 201944.png'), label: 'Horizon', title: 'The Horizon',        sub: 'Unobstructed panorama across the northern lagoon at every hour' },
-  { src: img('Screenshot 2026-05-14 202001.png'), label: 'Pool',    title: 'Infinity Edge',      sub: 'A pool that merges seamlessly with the Indian Ocean beyond' },
-  { src: img('Screenshot 2026-05-14 202012.png'), label: 'Dining',  title: 'Al Fresco Dining',   sub: 'Covered pavilion for twelve — salt air and candlelight included' },
-  { src: img('Screenshot 2026-05-14 202036.png'), label: 'Master',  title: 'Master Suite',       sub: 'Five en-suite bedrooms, each a sanctuary of reclaimed teak' },
-  { src: img('Screenshot 2026-05-14 202054.png'), label: 'Garden',  title: 'Tropical Gardens',   sub: '2,400m² of curated botanical landscape and private pathways' },
+// ─── Custom cursor ────────────────────────────────────────────────────────────
+function CustomCursor() {
+  const dotRef  = useRef<HTMLDivElement>(null)
+  const ringRef = useRef<HTMLDivElement>(null)
+  const pos     = useRef({ x: -100, y: -100 })
+  const ring    = useRef({ x: -100, y: -100 })
+  const rafRef  = useRef<number>()
+
+  useEffect(() => {
+    // Hide system cursor globally
+    document.body.style.cursor = 'none'
+
+    const onMove = (e: MouseEvent) => {
+      pos.current = { x: e.clientX, y: e.clientY }
+      const t = e.target as HTMLElement
+      const isImg     = t.closest('img, .img-hover') !== null
+      const isBtn     = t.closest('a, button, .btn') !== null
+      const isDragging = document.body.classList.contains('dragging')
+
+      if (dotRef.current) {
+        dotRef.current.style.opacity = '1'
+        dotRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%,-50%) scale(${isDragging ? 1.8 : isBtn ? 1.4 : 1})`
+        dotRef.current.style.background = isBtn ? 'var(--gold2)' : 'var(--gold)'
+      }
+      if (ringRef.current) {
+        ringRef.current.style.width  = isImg ? '56px' : '28px'
+        ringRef.current.style.height = isImg ? '56px' : '28px'
+        ringRef.current.style.opacity = isDragging ? '0' : '1'
+        ringRef.current.style.borderColor = isBtn ? 'var(--gold2)' : 'rgba(196,160,90,0.5)'
+      }
+    }
+
+    // Lerp ring to dot position
+    const animate = () => {
+      ring.current.x += (pos.current.x - ring.current.x) * 0.1
+      ring.current.y += (pos.current.y - ring.current.y) * 0.1
+      if (ringRef.current) {
+        ringRef.current.style.transform = `translate(${ring.current.x}px, ${ring.current.y}px) translate(-50%,-50%)`
+      }
+      rafRef.current = requestAnimationFrame(animate)
+    }
+    rafRef.current = requestAnimationFrame(animate)
+
+    window.addEventListener('mousemove', onMove)
+    return () => {
+      document.body.style.cursor = ''
+      window.removeEventListener('mousemove', onMove)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+  }, [])
+
+  return (
+    <>
+      {/* Dot — snaps instantly */}
+      <div ref={dotRef} style={{
+        position: 'fixed', top: 0, left: 0, zIndex: 99999,
+        width: 6, height: 6, borderRadius: '50%',
+        background: 'var(--gold)', pointerEvents: 'none',
+        opacity: 0, transition: 'transform 0.08s ease, background 0.3s, width 0.3s, height 0.3s',
+        willChange: 'transform',
+      }} />
+      {/* Ring — lags behind (lerp) */}
+      <div ref={ringRef} style={{
+        position: 'fixed', top: 0, left: 0, zIndex: 99998,
+        width: 28, height: 28, borderRadius: '50%',
+        border: '1px solid rgba(196,160,90,0.5)',
+        pointerEvents: 'none', opacity: 0,
+        transition: 'width 0.4s ease, height 0.4s ease, opacity 0.3s, border-color 0.3s',
+        willChange: 'transform',
+      }} />
+    </>
+  )
+}
+
+// ─── Drag-to-scroll ───────────────────────────────────────────────────────────
+function DragScroll() {
+  useEffect(() => {
+    let startY = 0
+    let startScroll = 0
+    let lastY = 0
+    let lastTime = 0
+    let velocity = 0
+    let isDragging = false
+    let rafId: number
+
+    const onDown = (e: MouseEvent) => {
+      // Don't hijack clicks on interactive elements
+      const t = e.target as HTMLElement
+      if (t.closest('a, button, input, textarea, select')) return
+      isDragging = true
+      startY = e.clientY
+      startScroll = window.scrollY
+      lastY = e.clientY
+      lastTime = performance.now()
+      velocity = 0
+      document.body.classList.add('dragging')
+      document.body.style.userSelect = 'none'
+      document.body.style.cursor = 'none'
+    }
+
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging) return
+      const now = performance.now()
+      const dt = Math.max(1, now - lastTime)
+      velocity = (lastY - e.clientY) / dt
+      lastY = e.clientY
+      lastTime = now
+      const delta = startY - e.clientY
+      window.scrollTo({ top: startScroll + delta * 1.4, behavior: 'instant' as ScrollBehavior })
+    }
+
+    const onUp = () => {
+      if (!isDragging) return
+      isDragging = false
+      document.body.classList.remove('dragging')
+      document.body.style.userSelect = ''
+
+      // Momentum coast
+      const momentumV = velocity * 400
+      let remaining = momentumV
+      const coast = () => {
+        if (Math.abs(remaining) < 0.5) return
+        remaining *= 0.92
+        window.scrollBy({ top: remaining, behavior: 'instant' as ScrollBehavior })
+        rafId = requestAnimationFrame(coast)
+      }
+      rafId = requestAnimationFrame(coast)
+    }
+
+    window.addEventListener('mousedown', onDown)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousedown', onDown)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      cancelAnimationFrame(rafId)
+    }
+  }, [])
+  return null
+}
+
+// ─── Page load curtain ────────────────────────────────────────────────────────
+function LoadCurtain() {
+  const [gone, setGone] = useState(false)
+  const [visible, setVisible] = useState(true)
+  useEffect(() => {
+    const t1 = setTimeout(() => setGone(true), 1200)
+    const t2 = setTimeout(() => setVisible(false), 2000)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+  if (!visible) return null
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99997,
+      background: 'var(--black)',
+      opacity: gone ? 0 : 1,
+      transition: 'opacity 0.9s cubic-bezier(0.4,0,0.2,1)',
+      pointerEvents: gone ? 'none' : 'all',
+    }} />
+  )
+}
+
+const IMGS = {
+  hero:    img('iron-wood-house-earth-lines-architects_18.jpg'),
+  living:  img('Screenshot 2026-05-14 201935.png'),
+  horizon: img('Screenshot 2026-05-14 201944.png'),
+  pool:    img('Screenshot 2026-05-14 202001.png'),
+  dining:  img('Screenshot 2026-05-14 202012.png'),
+  garden:  img('Screenshot 2026-05-14 202025.png'),
+  master:  img('Screenshot 2026-05-14 202036.png'),
+  detail:  img('Screenshot 2026-05-14 202054.png'),
+  spa1:    img('Screenshot 2026-05-14 202025.png'),
+  spa2:    img('Screenshot 2026-05-15 220411.png'),
+  island:  img('grok-image-86070f82-2171-4501-8fe6-d6f72d7d1dcb.png'),
+  pool2:   img('205032606_4198387713573399_8106792087768550505_n.jpg'),
+}
+
+// Villa gallery — the horizontal scroll sequence
+const VILLA_SLIDES = [
+  { src: IMGS.horizon, label: 'Arrival',        caption: 'A private approach through two hectares of tropical canopy' },
+  { src: IMGS.pool2,   label: 'The Pool',       caption: 'Infinity edge dissolving into the Indian Ocean at blue hour' },
+  { src: IMGS.living,  label: 'Living',         caption: 'Floor-to-ceiling glass — interior and ocean as one' },
+  { src: IMGS.horizon, label: 'The Horizon',    caption: 'Unobstructed panorama across the northern lagoon' },
+  { src: IMGS.pool,    label: 'Infinity Edge',  caption: 'A pool that ends where the Indian Ocean begins' },
+  { src: IMGS.dining,  label: 'Al Fresco',      caption: 'A covered pavilion for twelve. Salt air and candlelight.' },
+  { src: IMGS.master,  label: 'Master Suite',   caption: 'Five en-suite sanctuaries of reclaimed teak and stone' },
+  { src: IMGS.detail,  label: 'Detail',         caption: '2,400m² of curated botanical landscape' },
 ]
 
-const SPA = [
-  { src: img('Screenshot 2026-05-14 202025.png'), label: 'Concierge',   title: 'Personal Concierge',  sub: 'Your dedicated wellness curator — on call, always present' },
-  { src: img('Screenshot 2026-05-15 220411.png'), label: 'Treatment',   title: 'Treatment Sanctuary', sub: 'Bespoke rituals drawn from ancient Mauritian healing traditions' },
-  { src: img('Image.jpg'),                        label: 'Restoration', title: 'Deep Restoration',    sub: 'Total silence. Total surrender. Total renewal.' },
-]
-
-const FEATURES = ['Infinity Pool', 'Private Beach Access', 'Smart Home', 'Wine Cellar', 'Spa Suite', 'Concierge']
-
-// ── Hooks ────────────────────────────────────────────────────────────────────
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null)
   const [inView, setInView] = useState(false)
@@ -47,588 +233,825 @@ function useScrollProgress() {
   const ref = useRef<HTMLDivElement>(null)
   const [p, setP] = useState(0)
   useEffect(() => {
-    const onScroll = () => {
+    const fn = () => {
       const el = ref.current; if (!el) return
-      const rect = el.getBoundingClientRect()
-      const vh = window.innerHeight
-      setP(Math.min(1, Math.max(0, (vh - rect.top) / (el.offsetHeight + vh))))
+      const r = el.getBoundingClientRect()
+      setP(Math.min(1, Math.max(0, (window.innerHeight - r.top) / (el.offsetHeight + window.innerHeight))))
     }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    onScroll()
-    return () => window.removeEventListener('scroll', onScroll)
+    window.addEventListener('scroll', fn, { passive: true }); fn()
+    return () => window.removeEventListener('scroll', fn)
   }, [])
   return { ref, p }
 }
 
-// Mouse-tracking 3D tilt for a DOM element
-function useTilt(strength = 12) {
-  const ref = useRef<HTMLDivElement>(null)
-  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const el = ref.current; if (!el) return
-    const r = el.getBoundingClientRect()
-    const x = (e.clientX - r.left) / r.width  - 0.5   // -0.5 → 0.5
-    const y = (e.clientY - r.top)  / r.height - 0.5
-    el.style.transform = `perspective(900px) rotateY(${x * strength}deg) rotateX(${-y * strength}deg) scale(1.015)`
-  }, [strength])
-  const onLeave = useCallback(() => {
-    const el = ref.current; if (!el) return
-    el.style.transform = 'perspective(900px) rotateY(0deg) rotateX(0deg) scale(1)'
-  }, [])
-  return { ref, onMove, onLeave }
+function useCountUp(target: number, active: boolean, duration = 2200, decimals = 0) {
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    if (!active) return
+    const start = performance.now()
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration)
+      const ease = 1 - Math.pow(1 - t, 3)
+      setVal(parseFloat((ease * target).toFixed(decimals)))
+      if (t < 1) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }, [active, target, duration, decimals])
+  return val
 }
 
-// ── Global styles ────────────────────────────────────────────────────────────
+// ─── Global styles ────────────────────────────────────────────────────────────
 function GlobalStyles() {
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=EB+Garamond:ital,wght@0,400;1,400&family=Montserrat:wght@200;300;400&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Jost:wght@200;300;400&display=swap');
+
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
       :root {
-        --obsidian:   #07070a;
-        --void:       #050508;
-        --surface:    #0e0e13;
-        --spa-dark:   #03030a;
-        --gold:       #c9a460;
-        --gold-light: #e8cfa0;
-        --gold-dim:   rgba(201,164,96,0.15);
-        --border:     rgba(201,164,96,0.12);
-        --border-hi:  rgba(201,164,96,0.3);
-        --text-1:     #f0ece4;
-        --text-2:     #9b9488;
-        --text-3:     #5a5650;
-        --fd: 'Cormorant Garamond', Georgia, serif;
-        --fb: 'Montserrat', sans-serif;
-        --fa: 'EB Garamond', Georgia, serif;
+        --black:   #050507;
+        --ink:     #08080c;
+        --surface: #0d0d12;
+        --lift:    #121218;
+        --spa:     #030308;
+        --gold:    #c4a05a;
+        --gold2:   #dcc07e;
+        --stone:   #f0ece4;
+        --smoke:   #9a9488;
+        --ash:     #5a5650;
+        --border:  rgba(196,160,90,0.12);
+        --borderl: rgba(196,160,90,0.06);
+        --F: 'Cormorant Garamond', Georgia, serif;
+        --H: 'Cinzel', serif;
+        --G: 'Jost', sans-serif;
       }
+
       html { scroll-behavior: smooth; }
       body {
-        background: var(--obsidian); color: var(--text-1);
-        font-family: var(--fb); font-weight: 300;
-        -webkit-font-smoothing: antialiased; overflow-x: hidden;
+        background: var(--black);
+        color: var(--stone);
+        font-family: var(--G);
+        font-weight: 300;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+        cursor: none;
       }
-      body::before {
-        content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0.03;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        background-size: 200px;
+      body.dragging { cursor: none !important; }
+      body.dragging * { cursor: none !important; }
+      a, button { cursor: none; }
+      body::after {
+        content: ''; position: fixed; inset: 0;
+        pointer-events: none; z-index: 9999; opacity: 0.025;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 180px;
       }
-      .disp { font-family: var(--fd); }
-      .acc  { font-family: var(--fa); }
-      .gold-grad {
-        background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 50%, #a07830 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      }
-      .eyebrow {
-        font-family: var(--fb); font-size: 9px; font-weight: 400;
-        letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold);
-      }
-      .nav-a {
-        font-family: var(--fb); font-size: 10px; letter-spacing: 0.22em;
-        text-transform: uppercase; color: var(--text-2); text-decoration: none; transition: color 0.3s;
-      }
-      .nav-a:hover { color: var(--gold-light); }
-      .btn {
-        display: inline-flex; align-items: center; padding: 14px 32px;
-        font-family: var(--fb); font-size: 9px; font-weight: 400; letter-spacing: 0.3em;
-        text-transform: uppercase; text-decoration: none; cursor: pointer; transition: all 0.4s ease;
-        border: none; outline: none;
-      }
-      .btn-o { background: transparent; border: 1px solid var(--border-hi); color: var(--text-1); }
-      .btn-o:hover { background: var(--gold-dim); border-color: var(--gold); color: var(--gold-light); }
-      .btn-s { background: linear-gradient(135deg, var(--gold) 0%, #a07830 100%); color: var(--obsidian); }
-      .btn-s:hover { background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%); transform: translateY(-2px); box-shadow: 0 12px 48px rgba(201,164,96,0.3); }
-      .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); }
-      @media (max-width: 900px) {
-        .stat-grid { grid-template-columns: repeat(2,1fr); }
-        .nav-links { display: none !important; }
-        .hero-btns { flex-direction: column !important; }
-        .inv-grid  { grid-template-columns: 1fr !important; }
-        .contact-grid { grid-template-columns: 1fr !important; }
-      }
+
+      /* Gold progress bar */
+      #bar { position:fixed; top:0; left:0; height:1px; background:var(--gold); z-index:600; transition:width 0.1s linear; }
+
+      .track { font-family:var(--G); font-size:9px; font-weight:300; letter-spacing:0.35em; text-transform:uppercase; color:var(--gold); }
+
+      .nav-a { font-family:var(--G); font-size:10px; letter-spacing:0.22em; text-transform:uppercase; color:var(--smoke); text-decoration:none; font-weight:300; transition:color 0.3s; }
+      .nav-a:hover { color:var(--gold2); }
+
+      .btn { display:inline-block; font-family:var(--G); font-size:9px; font-weight:300; letter-spacing:0.32em; text-transform:uppercase; text-decoration:none; padding:14px 36px; transition:all 0.5s ease; cursor:pointer; border:none; outline:none; }
+      .btn-gold { background:var(--gold); color:var(--black); }
+      .btn-gold:hover { background:var(--gold2); box-shadow:0 8px 40px rgba(196,160,90,0.28); }
+      .btn-outline { background:transparent; border:1px solid rgba(196,160,90,0.3); color:var(--stone); }
+      .btn-outline:hover { border-color:var(--gold); background:rgba(196,160,90,0.06); color:var(--gold2); }
+      .btn-stone { background:var(--stone); color:var(--black); }
+      .btn-stone:hover { background:var(--gold2); }
+
       input, textarea {
-        background: transparent; border: 1px solid var(--border); color: var(--text-1);
-        font-family: var(--fb); font-size: 12px; font-weight: 300; letter-spacing: 0.08em;
-        padding: 16px 20px; width: 100%; outline: none; transition: border-color 0.3s;
+        font-family:var(--G); font-size:13px; font-weight:300; letter-spacing:0.06em;
+        background:transparent; border:none; border-bottom:1px solid rgba(196,160,90,0.15);
+        color:var(--stone); padding:14px 0; width:100%; outline:none; transition:border-color 0.4s;
       }
-      input::placeholder, textarea::placeholder { color: var(--text-3); }
-      input:focus, textarea:focus { border-color: var(--gold); }
+      input:focus, textarea:focus { border-color:var(--gold); }
+      input::placeholder, textarea::placeholder { color:var(--ash); }
 
-      @keyframes fadeUp  { from{opacity:0;transform:translateY(36px)}to{opacity:1;transform:translateY(0)} }
-      @keyframes spulse  { 0%,100%{opacity:0.35;transform:scaleY(0.5)}50%{opacity:1;transform:scaleY(1)} }
-      @keyframes floatUp { 0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)} }
+      @keyframes kb        { from{transform:scale(1)} to{transform:scale(1.05) translate(-0.4%,-0.4%)} }
+      @keyframes fadeUp    { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+      @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
+      @keyframes lineW     { from{width:0} to{width:56px} }
+      @keyframes pulse     { 0%,100%{opacity:0.3;transform:scaleY(0.4)} 50%{opacity:1;transform:scaleY(1)} }
+      @keyframes blurIn    { from{opacity:0;filter:blur(18px);transform:translateY(12px)} to{opacity:1;filter:blur(0);transform:translateY(0)} }
+      @keyframes dragHint  { 0%{opacity:0;transform:translateY(4px)} 30%{opacity:0.5} 70%{opacity:0.5} 100%{opacity:0;transform:translateY(-4px)} }
 
-      /* 3D card base — transition is smooth back to flat */
-      .tilt-card { transition: transform 0.5s cubic-bezier(0.23,1,0.32,1); transform-style: preserve-3d; }
+      /* Blur-to-sharp entrance for images */
+      .blur-enter { animation: blurIn 0.9s cubic-bezier(0.16,1,0.3,1) forwards; }
 
-      /* depth shadow that strengthens on tilt */
-      .depth-shadow { box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 1px 0 rgba(201,164,96,0.08); transition: box-shadow 0.5s ease; }
-      .depth-shadow:hover { box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 1px 0 rgba(201,164,96,0.15), inset 0 1px 0 rgba(201,164,96,0.06); }
+      /* Img hover breathe */
+      section img { transition: filter 0.6s ease, transform 0.6s ease; }
+      section img:hover { filter: brightness(1.06); }
+
+      @media(max-width:768px){
+        .hide-m { display:none !important; }
+        .stack-m { grid-template-columns:1fr !important; }
+      }
     `}</style>
   )
 }
 
-// ── NavBar ───────────────────────────────────────────────────────────────────
+// ─── Progress bar ─────────────────────────────────────────────────────────────
+function ProgressBar() {
+  const [w, setW] = useState(0)
+  useEffect(() => {
+    const fn = () => {
+      const d = document.documentElement
+      setW((window.scrollY / (d.scrollHeight - window.innerHeight)) * 100)
+    }
+    window.addEventListener('scroll', fn, { passive: true })
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+  return <div id="bar" style={{ width: `${w}%` }} />
+}
+
+// ─── NavBar ───────────────────────────────────────────────────────────────────
 function NavBar() {
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 80)
-    window.addEventListener('scroll', h, { passive: true })
-    return () => window.removeEventListener('scroll', h)
+    const fn = () => setScrolled(window.scrollY > 60)
+    window.addEventListener('scroll', fn, { passive: true }); fn()
+    return () => window.removeEventListener('scroll', fn)
   }, [])
   return (
     <nav style={{
-      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: '76px', padding: '0 56px',
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 500, height: 68,
+      padding: '0 clamp(24px,5vw,72px)',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      transition: 'background 0.6s',
-      background: scrolled ? 'rgba(5,5,8,0.93)' : 'transparent',
-      backdropFilter: scrolled ? 'blur(24px)' : 'none',
-      borderBottom: `1px solid ${scrolled ? 'rgba(201,164,96,0.1)' : 'transparent'}`,
+      background: scrolled ? 'rgba(5,5,7,0.9)' : 'transparent',
+      backdropFilter: scrolled ? 'blur(22px)' : 'none',
+      borderBottom: `1px solid ${scrolled ? 'rgba(196,160,90,0.08)' : 'transparent'}`,
+      transition: 'background 0.6s, border-color 0.6s',
     }}>
       <a href="/" style={{ textDecoration: 'none' }}>
-        <div className="disp" style={{ fontSize: '19px', fontWeight: 300, letterSpacing: '0.18em', color: 'var(--text-1)', lineHeight: 1 }}>ÉDEN ESTATES</div>
-        <div className="eyebrow" style={{ marginTop: '3px', fontSize: '7.5px', letterSpacing: '0.32em' }}>Mauritius · Est. 2018</div>
+        <div style={{ fontFamily: 'var(--F)', fontSize: 18, fontWeight: 300, letterSpacing: '0.22em', color: 'var(--stone)', lineHeight: 1 }}>ÉDEN ESTATES</div>
+        <div className="track" style={{ fontSize: 7, letterSpacing: '0.42em', marginTop: 3 }}>Mauritius · Est. 2018</div>
       </a>
-      <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '44px' }}>
-        {[['The Estate','#estate'],['Investment','#investment'],['Wellness','#wellness'],['Contact','#contact']].map(([l,h]) => (
+      <div className="hide-m" style={{ display: 'flex', alignItems: 'center', gap: 44 }}>
+        {[['Estate','#estate'],['Villas','#villas'],['Island','#island'],['Wellness','#wellness'],['Invest','#investment'],['Contact','#contact']].map(([l,h]) => (
           <a key={l} href={h} className="nav-a">{l}</a>
         ))}
-        <a href="#contact" className="btn btn-o" style={{ padding: '9px 22px', fontSize: '8.5px' }}>Private Viewing</a>
+        <a href="#contact" className="btn btn-outline" style={{ fontSize: 8, padding: '9px 20px' }}>Enquire</a>
       </div>
     </nav>
   )
 }
 
-// ── Hero — McClean image, mouse-parallax depth layers ───────────────────────
+// ─── Hero — staircase image ───────────────────────────────────────────────────
 function Hero() {
-  const [mouse, setMouse] = useState({ x: 0, y: 0 })
-  const onMove = (e: React.MouseEvent) => {
-    setMouse({ x: (e.clientX / window.innerWidth - 0.5), y: (e.clientY / window.innerHeight - 0.5) })
-  }
-
+  const { imgStyle, textStyle } = useMouseParallax(14)
   return (
-    <section onMouseMove={onMove} style={{ minHeight: '100dvh', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden' }}>
-      {/* Background image — moves slightly against mouse (far layer) */}
-      <div style={{ position: 'absolute', inset: '-4%', transition: 'transform 0.8s cubic-bezier(0.23,1,0.32,1)', transform: `translate(${mouse.x * -18}px, ${mouse.y * -12}px)` }}>
-        <img src={HERO_IMG} alt="Villa Azur" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%' }} />
-      </div>
-      {/* Gradient layers */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(120deg, rgba(5,5,8,0.78) 0%, rgba(5,5,8,0.3) 55%, rgba(5,5,8,0.05) 100%)' }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--obsidian) 0%, transparent 50%)' }} />
-
-      {/* Floating yield badge — mid layer, moves faster than bg */}
-      <div style={{
-        position: 'absolute', top: '100px', right: '56px', zIndex: 2,
-        border: '1px solid var(--border-hi)', padding: '20px 28px', textAlign: 'center',
-        background: 'rgba(5,5,8,0.55)', backdropFilter: 'blur(16px)',
-        transition: 'transform 0.5s cubic-bezier(0.23,1,0.32,1)',
-        transform: `perspective(800px) translate(${mouse.x * 24}px, ${mouse.y * 16}px) rotateY(${mouse.x * -4}deg) rotateX(${mouse.y * 3}deg)`,
-      }}>
-        <div className="eyebrow" style={{ marginBottom: '8px' }}>Est. Annual Yield</div>
-        <div className="disp gold-grad" style={{ fontSize: '34px', fontWeight: 300 }}>9%</div>
-        <div style={{ fontSize: '9px', color: 'var(--text-3)', letterSpacing: '0.12em', marginTop: '4px' }}>Short-term rental</div>
+    <section style={{ height: '100dvh', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div style={{ position: 'absolute', inset: '-6%', transition: 'transform 0.8s cubic-bezier(0.23,1,0.32,1)', ...imgStyle }}>
+        <img src={IMGS.hero} alt="Villa Azur"
+          onError={(e) => { (e.target as HTMLImageElement).src = IMGS.pool2 }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%', animation: 'kb 22s ease-out forwards' }}
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(5,5,7,0.55) 0%, rgba(5,5,7,0.1) 30%, rgba(5,5,7,0.15) 60%, rgba(5,5,7,0.95) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(5,5,7,0.5) 0%, transparent 55%, rgba(5,5,7,0.1) 100%)' }} />
       </div>
 
-      {/* Main text — moves slightly toward mouse (close layer) */}
-      <div style={{
-        position: 'relative', zIndex: 2,
-        padding: 'clamp(40px,8vw,110px)', paddingBottom: 'clamp(70px,10vw,130px)', maxWidth: '860px',
-        transition: 'transform 0.6s cubic-bezier(0.23,1,0.32,1)',
-        transform: `translate(${mouse.x * 8}px, ${mouse.y * 5}px)`,
-      }}>
-        <p className="eyebrow" style={{ marginBottom: '28px', animation: 'fadeUp 1s ease 0.2s both' }}>Grand Baie · North Coast · Mauritius</p>
-        <h1 className="disp" style={{ fontSize: 'clamp(48px,7.5vw,110px)', fontWeight: 300, lineHeight: 1.04, margin: '0 0 8px', fontStyle: 'italic', color: 'var(--text-1)', animation: 'fadeUp 1s ease 0.4s both' }}>Villa Azur</h1>
-        <div className="disp gold-grad" style={{ fontSize: 'clamp(22px,3vw,42px)', fontWeight: 300, marginBottom: '36px', animation: 'fadeUp 1s ease 0.55s both' }}>$3,750,000</div>
-        <p className="acc" style={{ fontSize: 'clamp(13px,1.4vw,16px)', lineHeight: 1.85, color: 'var(--text-2)', maxWidth: '460px', marginBottom: '52px', animation: 'fadeUp 1s ease 0.7s both' }}>
-          Suspended above the Indian Ocean, Villa Azur commands panoramic views across the northern lagoon — a masterwork of glass, stone, and tropical modernism.
+      <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(40px,6vw,96px)', paddingBottom: 'clamp(80px,10vw,128px)', maxWidth: 860, transition: 'transform 0.6s cubic-bezier(0.23,1,0.32,1)', ...textStyle }}>
+        <div className="track" style={{ marginBottom: 28, opacity: 0, animation: 'fadeUp 1s ease 0.6s forwards' }}>
+          Grand Baie · North Coast · Mauritius
+        </div>
+        <h1 style={{ fontFamily: 'var(--H)', fontSize: 'clamp(18px,2.4vw,34px)', fontWeight: 400, fontStyle: 'normal', lineHeight: 1.5, color: 'var(--stone)', margin: '0 0 28px', opacity: 0, animation: 'fadeUp 1.4s ease 0.9s forwards', letterSpacing: '0.28em', textTransform: 'uppercase' }}>
+          Descend into luxury
+        </h1>
+        <div style={{ width: 0, height: 1, background: 'var(--gold)', marginBottom: 32, opacity: 0.5, animation: 'lineW 1.6s ease 1.7s forwards' }} />
+        <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(15px,1.7vw,19px)', fontStyle: 'italic', fontWeight: 300, color: 'rgba(240,236,228,0.62)', maxWidth: 460, lineHeight: 1.8, marginBottom: 52, opacity: 0, animation: 'fadeUp 1s ease 2s forwards' }}>
+          Boutique villas of singular distinction. Permanent residency. A tax environment without parallel. From £1,250,000.
         </p>
-        <div className="hero-btns" style={{ display: 'flex', gap: '14px', animation: 'fadeUp 1s ease 0.85s both' }}>
-          <a href="#estate" className="btn btn-s">Explore the Estate</a>
-          <a href="#contact" className="btn btn-o">Arrange a Viewing</a>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', opacity: 0, animation: 'fadeUp 1s ease 2.3s forwards' }}>
+          <a href="#estate" className="btn btn-gold">Explore the Estate</a>
+          <a href="#contact" className="btn btn-outline">Private Viewing</a>
         </div>
       </div>
 
       {/* Scroll cue */}
-      <div style={{ position: 'absolute', bottom: '40px', right: '56px', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-        <span className="eyebrow" style={{ writingMode: 'vertical-rl', fontSize: '8px' }}>Scroll</span>
-        <div style={{ width: '1px', height: '70px', background: 'linear-gradient(to bottom, var(--gold), transparent)', animation: 'spulse 2.2s ease infinite' }} />
+      <div style={{ position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, opacity: 0, animation: 'fadeIn 1s ease 3.2s forwards' }}>
+        <div className="track" style={{ fontSize: 7, color: 'rgba(196,160,90,0.5)' }}>Scroll</div>
+        <div style={{ width: 1, height: 52, background: 'linear-gradient(to bottom, var(--gold), transparent)', animation: 'pulse 2s ease infinite' }} />
+      </div>
+
+      {/* Drag hint — appears then fades */}
+      <div style={{ position: 'absolute', bottom: 36, right: 'clamp(24px,5vw,72px)', zIndex: 2, opacity: 0, animation: 'dragHint 4.5s ease 4s forwards', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 18, height: 18, border: '1px solid rgba(196,160,90,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--gold)', opacity: 0.6 }} />
+        </div>
+        <span className="track" style={{ fontSize: 7, color: 'rgba(196,160,90,0.4)' }}>Click &amp; drag</span>
+      </div>
+
+      {/* Yield badge */}
+      <div style={{ position: 'absolute', top: 88, right: 'clamp(24px,5vw,72px)', zIndex: 2, borderTop: '1px solid rgba(196,160,90,0.28)', borderBottom: '1px solid rgba(196,160,90,0.28)', padding: '18px 28px', textAlign: 'center', background: 'rgba(5,5,7,0.5)', backdropFilter: 'blur(14px)', opacity: 0, animation: 'fadeIn 1s ease 2.6s forwards' }}>
+        <div className="track" style={{ fontSize: 7, marginBottom: 8 }}>Est. Gross Yield</div>
+        <div style={{ fontFamily: 'var(--F)', fontSize: 40, fontWeight: 300, lineHeight: 1, color: 'var(--gold)' }}>9%</div>
+        <div style={{ fontFamily: 'var(--F)', fontSize: 11, fontStyle: 'italic', color: 'var(--ash)', marginTop: 4 }}>short-term rental</div>
       </div>
     </section>
   )
 }
 
-// ── 3D Reveal Panel — image on a tilted plane that rotates flat on scroll ────
-function Panel3D({ src, label, title, sub, index, id }: { src:string; label:string; title:string; sub:string; index:number; id?:string }) {
-  const { ref, p } = useScrollProgress()
-  const { ref: inRef, inView } = useInView(0.05)
-  const combinedRef = (el: HTMLDivElement | null) => {
-    ;(ref as React.MutableRefObject<HTMLDivElement|null>).current = el
-    ;(inRef as React.MutableRefObject<HTMLDivElement|null>).current = el
-  }
-
-  const even = index % 2 === 0
-  // 3D: starts tilted ~25° and rotates flat as section scrolls into view
-  const tiltProgress = Math.min(1, Math.max(0, (p - 0.05) / 0.5))
-  const rotateY = even
-    ? (1 - tiltProgress) * -22   // comes from left-tilted
-    : (1 - tiltProgress) * 22    // comes from right-tilted
-  const rotateX = (1 - tiltProgress) * 8
-  const imgScale = 1 + (1 - tiltProgress) * 0.08
-
-  // Text floats in from opposite side with stagger
-  const textReady = inView
+// ─── Full-bleed parallax panel ────────────────────────────────────────────────
+function FullBleed({ src, eyebrow, title, sub, align = 'left', pos = 'center', dim = 0.45, id }:
+  { src:string; eyebrow?:string; title:string; sub?:string; align?:'left'|'center'|'right'; pos?:string; dim?:number; id?:string }) {
+  const { ref: pRef, p } = useScrollProgress()
+  const { ref: iRef, inView } = useInView(0.08)
+  const { imgStyle, textStyle } = useMouseParallax(10)
+  const ref = useCallback((el: HTMLDivElement|null) => {
+    ;(pRef as any).current = el;
+    ;(iRef as any).current = el
+  }, [])
+  const scrollY = `${(p - 0.5) * -11}%`
+  const aStyle = align === 'center' ? { textAlign:'center' as const, left:0, right:0 }
+    : align === 'right' ? { textAlign:'right' as const, right:'clamp(40px,7vw,120px)' }
+    : { left:'clamp(40px,7vw,120px)' }
 
   return (
-    <div id={id} ref={combinedRef} style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--obsidian)', padding: 'clamp(60px,8vw,120px) clamp(24px,6vw,80px)', perspective: '1200px', gap: 'clamp(32px,5vw,80px)', flexDirection: even ? 'row' : 'row-reverse', flexWrap: 'wrap' }}>
-
-      {/* 3D image card */}
-      <div style={{
-        flex: '0 0 clamp(300px, 52%, 700px)', aspectRatio: '16/10', position: 'relative',
-        transformStyle: 'preserve-3d',
-        transform: `perspective(1200px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`,
-        transition: 'transform 0.12s linear',
-        boxShadow: `${even ? '-' : ''}${32 * (1-tiltProgress)}px ${24 * (1-tiltProgress)}px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,164,96,0.08)`,
-        borderRadius: '2px', overflow: 'hidden',
+    <section id={id} style={{ height: '100dvh', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div style={{ position: 'absolute', inset: '-10%', overflow: 'hidden' }}>
+        <img
+          src={src} alt={title} loading="lazy"
+          className={inView ? 'blur-enter' : ''}
+          style={{
+            width: '100%', height: '100%', objectFit: 'cover', objectPosition: pos,
+            transform: `translateY(${scrollY}) ${imgStyle.transform}`,
+            willChange: 'transform', opacity: inView ? 1 : 0,
+          }}
+        />
+      </div>
+      <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(5,5,7,${dim+0.4}) 0%, rgba(5,5,7,${dim*0.25}) 50%, transparent 100%)` }} />
+      <div ref={ref} style={{
+        position: 'relative', zIndex: 2,
+        padding: 'clamp(40px,6vw,96px)', paddingBottom: 'clamp(60px,7vw,100px)',
+        ...aStyle,
+        opacity: inView ? 1 : 0, transform: inView ? 'none' : 'translateY(20px)',
+        transition: 'opacity 1.5s ease, transform 1.5s ease',
+        ...textStyle,
       }}>
-        <img src={src} alt={title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${imgScale})`, transition: 'transform 0.12s linear', display: 'block' }} />
-        {/* Specular highlight — simulates light catching the 3D surface */}
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: `linear-gradient(${even ? '135deg' : '225deg'}, rgba(255,255,255,${0.06 * (1-tiltProgress)}) 0%, transparent 60%)`,
-          transition: 'background 0.12s linear',
-        }} />
-        {/* Counter etched onto image */}
-        <div className="eyebrow" style={{ position: 'absolute', bottom: '18px', right: '22px', fontSize: '8px', color: 'rgba(201,164,96,0.5)', letterSpacing: '0.2em' }}>
-          {String(index + 1).padStart(2,'0')}
-        </div>
+        {eyebrow && <div className="track" style={{ marginBottom: 18 }}>{eyebrow}</div>}
+        <h2 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(36px,5.5vw,84px)', fontWeight: 300, fontStyle: 'italic', lineHeight: 1.04, color: 'var(--stone)', margin: 0 }}>{title}</h2>
+        {sub && <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(14px,1.5vw,18px)', fontStyle: 'italic', color: 'rgba(240,236,228,0.58)', marginTop: 18, maxWidth: 460, lineHeight: 1.75, ...(align === 'center' ? { margin: '18px auto 0', display: 'block' } : {}) }}>{sub}</p>}
       </div>
-
-      {/* Text — slides in from the side */}
-      <div style={{ flex: '1 1 260px', maxWidth: '380px', opacity: textReady ? 1 : 0, transform: textReady ? 'none' : `translateX(${even ? 40 : -40}px)`, transition: 'all 1s cubic-bezier(0.16,1,0.3,1) 0.3s' }}>
-        <div style={{ width: textReady ? '40px' : '0', height: '1px', background: 'var(--gold)', marginBottom: '28px', transition: 'width 1s ease 0.5s' }} />
-        <p className="eyebrow" style={{ marginBottom: '16px' }}>{label}</p>
-        <h2 className="disp" style={{ fontSize: 'clamp(28px,3.2vw,52px)', fontWeight: 400, fontStyle: 'italic', lineHeight: 1.1, marginBottom: '20px', color: 'var(--text-1)' }}>{title}</h2>
-        <p className="acc" style={{ fontSize: '15px', lineHeight: 1.85, color: 'var(--text-2)' }}>{sub}</p>
-      </div>
-    </div>
+    </section>
   )
 }
 
-// ── Full-bleed parallax panel with floating text card (3D lifted) ─────────────
-function PanelFloat({ src, label, title, sub, index }: { src:string; label:string; title:string; sub:string; index:number }) {
-  const { ref, p } = useScrollProgress()
-  const { ref: inRef, inView } = useInView(0.1)
-  const tilt = useTilt(8)
-  const combinedRef = (el: HTMLDivElement | null) => {
-    ;(ref as React.MutableRefObject<HTMLDivElement|null>).current = el
-    ;(inRef as React.MutableRefObject<HTMLDivElement|null>).current = el
-  }
-  const imgY = `${(p - 0.5) * -14}%`
-
+// ─── Wow capture — full bleed image immediately after hero ────────────────────
+function WowCapture() {
+  const { ref: pRef, p } = useScrollProgress()
+  const { ref: iRef, inView } = useInView(0.05)
+  const ref = useCallback((el: HTMLDivElement|null) => {
+    ;(pRef as any).current = el;
+    ;(iRef as any).current = el
+  }, [])
+  const imgY = `${(p - 0.5) * -10}%`
   return (
-    <div ref={combinedRef} style={{ minHeight: '100dvh', position: 'relative', overflow: 'hidden', background: '#000' }}>
-      <img src={src} alt={title} loading="lazy" style={{ width: '100%', height: '120%', objectFit: 'cover', position: 'absolute', top: '-10%', transform: `translateY(${imgY})`, willChange: 'transform' }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,7,10,0.9) 0%, rgba(7,7,10,0.2) 40%, transparent 100%)' }} />
-
-      {/* 3D-lifted floating card, mouse-tilt on hover */}
-      <div
-        ref={tilt.ref}
-        onMouseMove={tilt.onMove}
-        onMouseLeave={tilt.onLeave}
-        className="tilt-card depth-shadow"
-        style={{
-          position: 'absolute',
-          bottom: 'clamp(48px,6vw,96px)',
-          [index % 2 === 0 ? 'left' : 'right']: 'clamp(32px,6vw,96px)',
-          maxWidth: '400px',
-          background: 'rgba(7,7,10,0.72)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(201,164,96,0.14)',
-          padding: 'clamp(28px,3vw,48px)',
-          opacity: inView ? 1 : 0,
-          transition: 'opacity 1s ease 0.2s, transform 0.5s cubic-bezier(0.23,1,0.32,1)',
-          // initial animation handled via opacity; tilt.ref handles the transform
-        }}
-      >
-        {/* Gold top-edge accent */}
-        <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '1px', background: 'linear-gradient(to right, transparent, var(--gold), transparent)', opacity: 0.6 }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px' }}>
-          <div style={{ width: '28px', height: '1px', background: 'var(--gold)' }} />
-          <span className="eyebrow">{label}</span>
-        </div>
-        <h2 className="disp" style={{ fontSize: 'clamp(26px,3.2vw,48px)', fontWeight: 300, fontStyle: 'italic', lineHeight: 1.08, color: 'var(--text-1)', marginBottom: '14px' }}>{title}</h2>
-        <p className="acc" style={{ fontSize: '14px', lineHeight: 1.8, color: 'rgba(240,236,228,0.65)' }}>{sub}</p>
-        {/* subtle inner shadow at bottom — depth */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40px', background: 'linear-gradient(to top, rgba(0,0,0,0.3), transparent)', borderRadius: '0 0 2px 2px', pointerEvents: 'none' }} />
+    <section ref={ref} style={{ height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: '-8% 0' }}>
+        <img src={IMGS.pool2} alt="Villa Azur" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%', transform: `translateY(${imgY})`, willChange: 'transform' }} />
       </div>
-
-      <div className="eyebrow" style={{ position: 'absolute', top: '36px', right: '44px', fontSize: '8px', color: 'rgba(201,164,96,0.35)' }}>{String(index+1).padStart(2,'0')}</div>
-    </div>
-  )
-}
-
-// ── Wipe panel — image slices in like a shutter, text on dark side ────────────
-function PanelShutter({ src, label, title, sub, index }: { src:string; label:string; title:string; sub:string; index:number }) {
-  const { ref, inView } = useInView(0.08)
-  const { ref: spRef, p } = useScrollProgress()
-  const combinedRef = (el: HTMLDivElement | null) => {
-    ;(ref as React.MutableRefObject<HTMLDivElement|null>).current = el
-    ;(spRef as React.MutableRefObject<HTMLDivElement|null>).current = el
-  }
-  const even = index % 2 === 0
-  // Horizontal parallax on image inside the shutter
-  const imgX = `${(p - 0.5) * -6}%`
-
-  return (
-    <div ref={combinedRef} style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--obsidian)', padding: 'clamp(60px,8vw,120px) clamp(32px,6vw,96px)', position: 'relative', overflow: 'hidden' }}>
-      {/* Ghost number — deep background */}
-      <div className="disp" style={{ position: 'absolute', [even?'right':'left']: '-0.04em', top: '50%', transform: 'translateY(-50%)', fontSize: 'clamp(180px,25vw,360px)', fontWeight: 300, fontStyle: 'italic', color: 'rgba(201,164,96,0.03)', lineHeight: 1, userSelect: 'none', pointerEvents: 'none' }}>
-        {String(index+1).padStart(2,'0')}
-      </div>
-
-      {/* Text row — fades up */}
-      <div style={{ position: 'relative', zIndex: 2, marginBottom: '44px', maxWidth: '540px', opacity: inView ? 1 : 0, transform: inView ? 'none' : 'translateY(28px)', transition: 'all 1s ease 0.1s' }}>
-        <p className="eyebrow" style={{ marginBottom: '14px' }}>{label}</p>
-        <h2 className="disp" style={{ fontSize: 'clamp(36px,5vw,76px)', fontWeight: 300, fontStyle: 'italic', lineHeight: 1.06, color: 'var(--text-1)', marginBottom: '16px' }}>{title}</h2>
-        <p className="acc" style={{ fontSize: '16px', lineHeight: 1.85, color: 'var(--text-2)', maxWidth: '400px' }}>{sub}</p>
-      </div>
-
-      {/* Image shutters in — two halves reveal from centre */}
-      <div style={{ position: 'relative', zIndex: 2, height: 'clamp(240px,42vw,520px)', display: 'flex', overflow: 'hidden' }}>
-        {/* Left half */}
-        <div style={{ width: inView ? '50%' : '0%', overflow: 'hidden', transition: 'width 1.3s cubic-bezier(0.16,1,0.3,1) 0.2s', position: 'relative' }}>
-          <img src={src} alt={title} loading="lazy" style={{ position: 'absolute', top: 0, left: 0, width: '200%', height: '100%', objectFit: 'cover', objectPosition: 'left center', transform: `translateX(${imgX})`, willChange: 'transform' }} />
-        </div>
-        {/* Right half */}
-        <div style={{ width: inView ? '50%' : '0%', overflow: 'hidden', transition: 'width 1.3s cubic-bezier(0.16,1,0.3,1) 0.2s', position: 'relative' }}>
-          <img src={src} alt={title} loading="lazy" style={{ position: 'absolute', top: 0, right: 0, width: '200%', height: '100%', objectFit: 'cover', objectPosition: 'right center', transform: `translateX(${imgX})`, willChange: 'transform' }} />
-        </div>
-        {/* Gold seam at centre join */}
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: '1px', background: 'linear-gradient(to bottom, transparent, var(--gold), transparent)', opacity: inView ? 0.4 : 0, transition: 'opacity 0.5s ease 1.3s', transform: 'translateX(-50%)' }} />
-        {/* Gold corner marks */}
-        {[[0,0],[0,'auto'],['auto',0],['auto','auto']].map(([t,b],i) => (
-          <div key={i} style={{ position: 'absolute', top: t === 0 ? '0' : undefined, bottom: b === 0 ? '0' : undefined, [i%2===0?'left':'right']: '0', width: '20px', height: '20px', borderTop: (t===0) ? '1px solid rgba(201,164,96,0.4)' : 'none', borderBottom: (b===0) ? '1px solid rgba(201,164,96,0.4)' : 'none', borderLeft: (i%2===0) ? '1px solid rgba(201,164,96,0.4)' : 'none', borderRight: (i%2!==0) ? '1px solid rgba(201,164,96,0.4)' : 'none', opacity: inView ? 1 : 0, transition: `opacity 0.4s ease ${1.2 + i*0.06}s` }} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Second image full-bleed with parallax ────────────────────────────────────
-function SecondImage() {
-  const { ref, p } = useScrollProgress()
-  const { ref: inRef, inView } = useInView(0.1)
-  const combinedRef = (el: HTMLDivElement | null) => {
-    ;(ref as React.MutableRefObject<HTMLDivElement|null>).current = el
-    ;(inRef as React.MutableRefObject<HTMLDivElement|null>).current = el
-  }
-  return (
-    <div id="estate" ref={combinedRef} style={{ minHeight: '92vh', position: 'relative', overflow: 'hidden', background: '#000' }}>
-      <img src={SECOND_IMG} alt="Architecture" style={{ width: '100%', height: '120%', objectFit: 'cover', position: 'absolute', top: '-10%', transform: `translateY(${(p-0.5)*-14}%)`, willChange: 'transform' }} />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, var(--obsidian) 0%, transparent 18%, transparent 68%, var(--obsidian) 100%)' }} />
-      <div style={{ position: 'absolute', bottom: 'clamp(60px,8vw,120px)', left: 'clamp(32px,8vw,120px)', opacity: inView ? 1 : 0, transform: inView ? 'none' : 'translateY(28px)', transition: 'all 1.1s ease 0.2s' }}>
-        <div className="eyebrow" style={{ marginBottom: '16px' }}>Architecture</div>
-        <h2 className="disp" style={{ fontSize: 'clamp(32px,5vw,72px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--text-1)' }}>
-          Designed to<br /><span className="gold-grad">Disappear</span>
-        </h2>
-      </div>
-    </div>
-  )
-}
-
-// ── Staircase — slow descent, late fade ──────────────────────────────────────
-function StaircaseTransition() {
-  const { ref, p } = useScrollProgress()
-  const overlayOpacity = p < 0.55 ? 0 : Math.min(1, (p - 0.55) / 0.37)
-  const textOpacity    = p < 0.7  ? 0 : Math.min(1, (p - 0.7) * 7)
-  // Image scales slowly upward — reinforces descent
-  const scale = 1 + p * 0.07
-
-  return (
-    <div ref={ref} style={{ minHeight: '140dvh', position: 'relative', overflow: 'hidden' }}>
-      <img src={STAIRCASE} alt="Descending into sanctuary" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', position: 'absolute', inset: 0, transform: `scale(${scale})`, transformOrigin: 'center bottom' }} />
-      <div style={{ position: 'absolute', inset: 0, background: `rgba(2,2,6,${overlayOpacity})` }} />
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px', opacity: textOpacity }}>
-        <div className="eyebrow" style={{ marginBottom: '24px', letterSpacing: '0.4em' }}>Descend · Restore · Transcend</div>
-        <h2 className="disp" style={{ fontSize: 'clamp(32px,5vw,72px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--text-1)', lineHeight: 1.1 }}>
-          Enter the<br /><span className="gold-grad">Wellness Sanctuary</span>
-        </h2>
-      </div>
-    </div>
-  )
-}
-
-// ── Specs bar ────────────────────────────────────────────────────────────────
-function SpecsBar() {
-  const { ref, inView } = useInView()
-  const specs = [{v:'5',l:'Bedrooms'},{v:'6',l:'Bathrooms'},{v:'820m²',l:'Interior'},{v:'2,400m²',l:'Land'}]
-  return (
-    <div ref={ref} className="stat-grid" style={{ borderTop:'1px solid var(--border)', borderBottom:'1px solid var(--border)' }}>
-      {specs.map(({v,l},i) => (
-        <div key={l} style={{ padding:'clamp(36px,5vw,72px) clamp(24px,4vw,56px)', borderLeft:i>0?'1px solid var(--border)':'none', opacity:inView?1:0, transform:inView?'none':'translateY(24px)', transition:`all 0.9s ease ${i*0.12}s` }}>
-          <div className="disp gold-grad" style={{ fontSize:'clamp(36px,4vw,64px)', fontWeight:300, lineHeight:1, marginBottom:'10px' }}>{v}</div>
-          <div className="eyebrow" style={{ color:'var(--text-3)' }}>{l}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function FeaturesStrip() {
-  const { ref, inView } = useInView()
-  return (
-    <div ref={ref} style={{ padding:'48px clamp(24px,6vw,80px)', background:'var(--surface)', display:'flex', flexWrap:'wrap', gap:'12px', justifyContent:'center' }}>
-      {FEATURES.map((f,i) => (
-        <div key={f} style={{ padding:'10px 22px', border:'1px solid var(--border)', fontSize:'9.5px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--text-2)', opacity:inView?1:0, transition:`opacity 0.6s ease ${0.06*i}s` }}>{f}</div>
-      ))}
-    </div>
-  )
-}
-
-// ── Spa panels ───────────────────────────────────────────────────────────────
-function SpaPanel({ src, label, title, sub, index }: { src:string; label:string; title:string; sub:string; index:number }) {
-  const { ref, inView } = useInView(0.12)
-  const tilt = useTilt(6)
-  const even = index % 2 === 0
-  return (
-    <div ref={ref} style={{ minHeight:'90vh', display:'grid', gridTemplateColumns:even?'55% 45%':'45% 55%', background:'var(--spa-dark)', borderTop:'1px solid rgba(201,164,96,0.05)' }}>
-      <div style={{ gridColumn:even?1:2, gridRow:1, position:'relative', overflow:'hidden' }}>
-        <img src={src} alt={title} loading="lazy" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'brightness(0.85)', transform:inView?'scale(1)':'scale(1.07)', transition:'transform 2s cubic-bezier(0.16,1,0.3,1)' }} />
-        <div style={{ position:'absolute', top:0, bottom:0, [even?'right':'left']:0, width:'1px', background:'linear-gradient(to bottom, transparent, rgba(201,164,96,0.25), transparent)' }} />
-      </div>
-      <div style={{ gridColumn:even?2:1, gridRow:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'clamp(48px,6vw,100px) clamp(40px,5vw,80px)', background:'var(--spa-dark)' }}>
-        {/* 3D tilt card for spa text */}
-        <div ref={tilt.ref} onMouseMove={tilt.onMove} onMouseLeave={tilt.onLeave} className="tilt-card" style={{ opacity:inView?1:0, transform:inView?'perspective(800px) rotateY(0) rotateX(0)':'perspective(800px) rotateY(0) rotateX(0) translateY(24px)', transition:'opacity 0.9s ease 0.2s, translateY 0.9s ease 0.2s' }}>
-          <div style={{ width:inView?'32px':'0', height:'1px', background:'var(--gold)', marginBottom:'28px', transition:'width 1s ease 0.35s' }} />
-          <p className="eyebrow" style={{ marginBottom:'16px', opacity:inView?1:0, transition:'opacity 0.8s ease 0.4s' }}>{label}</p>
-          <h3 className="disp" style={{ fontSize:'clamp(26px,3vw,50px)', fontWeight:400, fontStyle:'italic', lineHeight:1.15, marginBottom:'20px', color:'var(--text-1)', opacity:inView?1:0, transform:inView?'none':'translateY(14px)', transition:'all 0.9s ease 0.5s' }}>{title}</h3>
-          <p className="acc" style={{ fontSize:'15px', lineHeight:1.9, color:'var(--text-2)', maxWidth:'290px', opacity:inView?1:0, transition:'opacity 0.9s ease 0.6s' }}>{sub}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function WellnessSection() {
-  const { ref, inView } = useInView()
-  const offerings = [
-    { icon:'◎', title:'Hydrotherapy',      desc:'Heated jet pool, cold plunge, and mineral steam room' },
-    { icon:'◈', title:'Body Rituals',      desc:'Volcanic stone massage · Coconut exfoliation · Ayurvedic treatments' },
-    { icon:'◇', title:'Yoga Pavilion',     desc:'Sunrise and sunset sessions with a resident instructor' },
-    { icon:'◉', title:'Nutrition & Detox', desc:'In-villa chef specialising in Ayurvedic and plant-based cuisine' },
-  ]
-  return (
-    <section id="wellness" style={{ background:'var(--spa-dark)' }}>
-      <div style={{ padding:'clamp(80px,10vw,140px) clamp(24px,8vw,120px)', textAlign:'center', borderBottom:'1px solid rgba(201,164,96,0.06)' }}>
-        <div className="eyebrow" style={{ marginBottom:'24px', letterSpacing:'0.45em' }}>In-Residence Wellness</div>
-        <h2 className="disp" style={{ fontSize:'clamp(36px,5.5vw,80px)', fontWeight:300, fontStyle:'italic', lineHeight:1.1, marginBottom:'28px' }}>The Spa Sanctuary</h2>
-        <div style={{ width:'1px', height:'80px', background:'linear-gradient(to bottom, var(--gold), transparent)', margin:'0 auto 32px' }} />
-        <p className="acc" style={{ fontSize:'clamp(14px,1.5vw,17px)', lineHeight:1.9, color:'var(--text-2)', maxWidth:'560px', margin:'0 auto' }}>
-          Concealed beneath the villa, a private world of restoration awaits. Ancient Mauritian healing traditions, reborn in obsidian and candlelight.
+      {/* Very subtle vignette — let the image breathe */}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(5,5,7,0.35) 0%, transparent 30%, transparent 65%, rgba(5,5,7,0.7) 100%)' }} />
+      {/* Fade in from black — the transition from hero */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(5,5,7,1)', opacity: inView ? 0 : 1, transition: 'opacity 1.8s ease', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: 'clamp(48px,6vh,80px)', left: 'clamp(40px,6vw,96px)', opacity: inView ? 1 : 0, transform: inView ? 'none' : 'translateY(16px)', transition: 'all 1.6s ease 0.4s' }}>
+        <div className="track" style={{ marginBottom: 14, fontSize: 8 }}>Villa Azur · Grand Baie</div>
+        <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(18px,2.5vw,36px)', fontStyle: 'italic', fontWeight: 300, color: 'var(--stone)', lineHeight: 1.3, maxWidth: 480 }}>
+          Where the pool ends<br />and the Indian Ocean begins
         </p>
       </div>
-      {SPA.map(({src,label,title,sub},i) => <SpaPanel key={i} src={src} label={label} title={title} sub={sub} index={i} />)}
-      <div ref={ref} style={{ padding:'clamp(64px,8vw,120px) clamp(24px,8vw,120px)' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:'1px', background:'rgba(201,164,96,0.07)' }}>
-          {offerings.map(({icon,title,desc},i) => (
-            <div key={title} style={{ background:'var(--spa-dark)', padding:'48px 36px', opacity:inView?1:0, transform:inView?'none':'translateY(20px)', transition:`all 0.8s ease ${i*0.12}s` }}>
-              <div style={{ fontSize:'22px', color:'var(--gold)', marginBottom:'20px', opacity:0.7, animation:'floatUp 4s ease infinite', animationDelay:`${i*0.8}s` }}>{icon}</div>
-              <h4 className="disp" style={{ fontSize:'22px', fontWeight:400, fontStyle:'italic', marginBottom:'12px', color:'var(--text-1)' }}>{title}</h4>
-              <p style={{ fontSize:'12px', lineHeight:1.8, color:'var(--text-3)' }}>{desc}</p>
+    </section>
+  )
+}
+
+
+// ─── INTERRUPT 1: Quote moment ────────────────────────────────────────────────
+function QuoteMoment({ quote, attr }: { quote:string; attr?:string }) {
+  const { ref, inView } = useInView(0.3)
+  return (
+    <section ref={ref} style={{ background: 'var(--surface)', padding: 'clamp(100px,14vw,180px) clamp(40px,12vw,200px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '55vh', textAlign: 'center', borderTop: '1px solid var(--borderl)', borderBottom: '1px solid var(--borderl)' }}>
+      <div style={{ width: inView?48:0, height:1, background:'var(--gold)', marginBottom:44, transition:'width 1.3s ease', opacity:0.6 }} />
+      <blockquote style={{ fontFamily:'var(--F)', fontSize:'clamp(22px,3.8vw,52px)', fontWeight:300, fontStyle:'italic', lineHeight:1.28, color:'var(--stone)', maxWidth:820, opacity:inView?1:0, transform:inView?'none':'translateY(14px)', transition:'all 1.5s ease 0.2s' }}>
+        "{quote}"
+      </blockquote>
+      {attr && <div className="track" style={{ marginTop:36, fontSize:8, color:'var(--ash)', opacity:inView?1:0, transition:'opacity 1s ease 0.9s' }}>{attr}</div>}
+    </section>
+  )
+}
+
+// ─── INTERRUPT 2: Horizontal villa photo scroll ───────────────────────────────
+function VillaScroll() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [activeIdx, setActiveIdx] = useState(0)
+  const { ref: hRef, inView } = useInView(0.05)
+
+  useEffect(() => {
+    const container = containerRef.current
+    const track = trackRef.current
+    if (!container || !track) return
+
+    let currentX = 0
+    let targetX = 0
+    let lastScrollY = window.scrollY
+    let lastTime = performance.now()
+    let rafId: number
+
+    const getMaxX = () => track.scrollWidth - window.innerWidth
+
+    const getBaseProgress = () => {
+      const rect = container.getBoundingClientRect()
+      const sticky = container.offsetHeight - window.innerHeight
+      return Math.min(1, Math.max(0, -rect.top / sticky))
+    }
+
+    // Lerp the visual position toward target for smoothness
+    const animate = () => {
+      const diff = targetX - currentX
+      if (Math.abs(diff) > 0.5) {
+        currentX += diff * 0.08
+        track.style.transform = `translateX(${-currentX}px)`
+        setActiveIdx(Math.round((currentX / getMaxX()) * (VILLA_SLIDES.length - 1)))
+      }
+      rafId = requestAnimationFrame(animate)
+    }
+    rafId = requestAnimationFrame(animate)
+
+    const onScroll = () => {
+      const now = performance.now()
+      const dt = Math.max(1, now - lastTime)
+      const dy = window.scrollY - lastScrollY
+      const velocity = Math.abs(dy / dt) // px/ms
+
+      // Base target from scroll position
+      const baseProgress = getBaseProgress()
+      const baseX = baseProgress * getMaxX()
+
+      // Velocity boost — faster scrolling = jumps ahead more
+      // Cap boost so it never skips more than ~1.5 slides worth
+      const slideWidth = window.innerWidth
+      const boost = Math.min(dy * velocity * 1.8, slideWidth * 1.5)
+      targetX = Math.min(getMaxX(), Math.max(0, baseX + boost))
+
+      lastScrollY = window.scrollY
+      lastTime = now
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(rafId)
+    }
+  }, [])
+
+  return (
+    <section id="estate" style={{ background: 'var(--black)' }}>
+      {/* Section header — outside the sticky */}
+      <div ref={hRef} style={{ padding: 'clamp(80px,10vw,130px) clamp(40px,6vw,96px) clamp(64px,7vw,96px)', borderBottom: '1px solid var(--borderl)', opacity: inView?1:0, transform: inView?'none':'translateY(16px)', transition: 'all 1s ease' }}>
+        <div className="track" style={{ marginBottom: 16 }}>The Estate · Scroll to explore</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 24 }}>
+          <h2 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(32px,4.5vw,68px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--stone)', lineHeight: 1.05 }}>
+            Villa Azur<br /><span style={{ color: 'var(--gold)', fontSize: '65%', fontStyle: 'normal', fontWeight: 300, letterSpacing: '0.04em' }}>Grand Baie · £3,750,000</span>
+          </h2>
+          <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(14px,1.4vw,17px)', fontStyle: 'italic', color: 'var(--smoke)', maxWidth: 400, lineHeight: 1.8 }}>
+            Five en-suite suites. Infinity pool. Private beach. Wine cellar. Dedicated concierge. The definitive Mauritian estate.
+          </p>
+        </div>
+      </div>
+
+      {/* Sticky horizontal track */}
+      <div ref={containerRef} style={{ height: `${VILLA_SLIDES.length * 60}vh`, position: 'relative' }}>
+        <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', background: 'var(--black)' }}>
+
+          {/* Slide track */}
+          <div ref={trackRef} style={{ display: 'flex', height: '100%', willChange: 'transform', transition: 'transform 0.06s linear' }}>
+            {VILLA_SLIDES.map(({ src, label, caption }, i) => (
+              <div key={i} style={{ minWidth: '100vw', height: '100%', position: 'relative', overflow: 'hidden' }}>
+                <img src={src} alt={label} loading={i < 2 ? 'eager' : 'lazy'} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                {/* Bottom gradient */}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(5,5,7,0.88) 0%, rgba(5,5,7,0.1) 45%, transparent 100%)' }} />
+                {/* Top left: counter */}
+                <div style={{ position: 'absolute', top: 24, left: 32 }}>
+                  <div className="track" style={{ fontSize: 8, color: 'rgba(196,160,90,0.5)' }}>{String(i+1).padStart(2,'0')} / {String(VILLA_SLIDES.length).padStart(2,'0')}</div>
+                </div>
+                {/* Bottom left: label + caption */}
+                <div style={{ position: 'absolute', bottom: 'clamp(40px,6vh,72px)', left: 'clamp(32px,5vw,72px)', maxWidth: 520 }}>
+                  <div className="track" style={{ marginBottom: 12, fontSize: 9 }}>{label}</div>
+                  <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(20px,2.8vw,40px)', fontStyle: 'italic', fontWeight: 300, color: 'var(--stone)', lineHeight: 1.2 }}>{caption}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Progress bar — bottom */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'rgba(196,160,90,0.1)' }}>
+            <div style={{ height: '100%', background: 'var(--gold)', width: `${((activeIdx) / (VILLA_SLIDES.length - 1)) * 100}%`, transition: 'width 0.15s ease' }} />
+          </div>
+
+          {/* Slide dots */}
+          <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, alignItems: 'center' }}>
+            {VILLA_SLIDES.map((_, i) => (
+              <div key={i} style={{ width: i === activeIdx ? 24 : 4, height: 1, background: i === activeIdx ? 'var(--gold)' : 'rgba(196,160,90,0.25)', transition: 'all 0.4s ease' }} />
+            ))}
+          </div>
+
+          {/* Right edge: current label large */}
+          <div style={{ position: 'absolute', right: 40, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center', whiteSpace: 'nowrap' }}>
+            <div className="track" style={{ fontSize: 8, color: 'rgba(196,160,90,0.2)', letterSpacing: '0.4em' }}>
+              {VILLA_SLIDES[activeIdx]?.label}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── INTERRUPT 3: Villa tiers ─────────────────────────────────────────────────
+const TIERS = [
+  { name:'Maison Lagon',  loc:'Trou aux Biches, West Coast', price:'£1,250,000', tag:'Entry Value', beds:3, baths:4, sqm:380, yield:'6.8%', desc:'A refined coastal retreat steps from Mauritius\'s most celebrated lagoon. Fully furnished, income-generating from day one. The ideal entry into Mauritian ownership.', img: IMGS.dining },
+  { name:'Domaine Noir',  loc:'Bel Ombre, South Coast',      price:'£2,100,000', tag:'Collector\'s', beds:4, baths:5, sqm:640, yield:'7.5%', desc:'Monolithic basalt, a 22-metre lap pool, and 1.4 hectares of private nature reserve on one of the island\'s last untouched coastlines. Architecture as a singular statement.', img: IMGS.pool },
+  { name:'Villa Azur',    loc:'Grand Baie, North Coast',      price:'£3,750,000', tag:'Flagship',    beds:5, baths:6, sqm:820, yield:'9%',   desc:'Five en-suite suites, infinity pool, private beach pathway, wine cellar, spa suite, dedicated concierge. The definitive Mauritian estate on the island\'s most coveted coast.', img: IMGS.pool2 },
+]
+
+function VillaTiers() {
+  const [active, setActive] = useState(1)
+  const { ref, inView } = useInView(0.08)
+  const tier = TIERS[active]
+
+  return (
+    <section id="villas" ref={ref} style={{ background: 'var(--surface)', borderTop: '1px solid var(--borderl)' }}>
+      <div style={{ padding: 'clamp(72px,9vw,120px) clamp(40px,6vw,96px) 0', opacity: inView?1:0, transform: inView?'none':'translateY(16px)', transition: 'all 1s ease' }}>
+        <div className="track" style={{ marginBottom: 14 }}>Exclusive Portfolio</div>
+        <h2 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(30px,4vw,60px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--stone)', marginBottom: 48 }}>Three estates. One island.</h2>
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--borderl)' }}>
+          {TIERS.map((t, i) => (
+            <button key={t.name} onClick={() => setActive(i)} style={{ fontFamily: 'var(--G)', fontSize: 9, fontWeight: 300, letterSpacing: '0.25em', textTransform: 'uppercase', background: 'none', border: 'none', borderBottom: active === i ? '1px solid var(--gold)' : '1px solid transparent', color: active === i ? 'var(--gold)' : 'var(--ash)', padding: '14px 28px 14px 0', cursor: 'pointer', transition: 'all 0.3s', marginBottom: -1 }}>
+              {t.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Active tier */}
+      <div key={active} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '70vh', opacity: 0, animation: 'fadeIn 0.5s ease forwards' }} className="stack-m">
+        <div style={{ position: 'relative', overflow: 'hidden', minHeight: 400 }}>
+          <img src={tier.img} alt={tier.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', top: 20, left: 20 }}>
+            <div style={{ background: 'var(--gold)', color: 'var(--black)', fontFamily: 'var(--G)', fontSize: 8, letterSpacing: '0.28em', textTransform: 'uppercase', padding: '5px 12px' }}>{tier.tag}</div>
+          </div>
+        </div>
+        <div style={{ padding: 'clamp(48px,6vw,96px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'var(--lift)' }}>
+          <div className="track" style={{ marginBottom: 10, fontSize: 8, color: 'var(--ash)' }}>{tier.loc}</div>
+          <h3 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(26px,3.2vw,48px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--stone)', marginBottom: 6, lineHeight: 1.1 }}>{tier.name}</h3>
+          <div style={{ fontFamily: 'var(--F)', fontSize: 'clamp(18px,2.2vw,32px)', fontWeight: 300, color: 'var(--gold)', marginBottom: 28, letterSpacing: '0.03em' }}>{tier.price}</div>
+          <div style={{ display: 'flex', gap: 28, marginBottom: 28, paddingBottom: 28, borderBottom: '1px solid var(--borderl)' }}>
+            {[{v:tier.beds,l:'Beds'},{v:tier.baths,l:'Baths'},{v:`${tier.sqm}m²`,l:'Interior'},{v:tier.yield,l:'Gross Yield'}].map(({v,l}) => (
+              <div key={l}>
+                <div style={{ fontFamily: 'var(--F)', fontSize: 'clamp(16px,1.8vw,26px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--stone)', lineHeight: 1 }}>{v}</div>
+                <div className="track" style={{ fontSize: 7, color: 'var(--ash)', marginTop: 5 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(13px,1.3vw,16px)', fontStyle: 'italic', lineHeight: 1.85, color: 'var(--smoke)', marginBottom: 36 }}>{tier.desc}</p>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
+            <a href="#contact" className="btn btn-gold" style={{ fontSize: 8, padding: '12px 28px' }}>Request Brochure</a>
+            <a href="#contact" className="btn btn-outline" style={{ fontSize: 8, padding: '12px 28px' }}>Arrange Viewing</a>
+          </div>
+          <div style={{ padding: '14px 18px', background: 'rgba(196,160,90,0.06)', borderLeft: '2px solid var(--gold)' }}>
+            <div className="track" style={{ fontSize: 7, marginBottom: 5 }}>Permanent Residency Included</div>
+            <div style={{ fontFamily: 'var(--F)', fontSize: 12, fontStyle: 'italic', color: 'var(--ash)', lineHeight: 1.6 }}>All estates qualify under EDB schemes. Buyer, spouse and dependants receive permanent residence for the duration of ownership.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── INTERRUPT 4: Horizontal materials scroll ─────────────────────────────────
+const MATERIALS = [
+  { n:'Reclaimed Teak',     s:'Floors · Ceilings · Louvres',     d:'Sourced from 200-year-old Indonesian river barges. Each plank carries its own century — grain patterns and silver-grey patina no fabrication can replicate.',     tex: img('teak.jpg') },
+  { n:'Volcanic Basalt',    s:'Walls · Pool surround · Columns',  d:'Quarried from the Mauritian interior. Cut to 600mm slabs, honed to a satin finish that is cool to the touch at every hour of the day.',                        tex: img('basalt.jpg') },
+  { n:'Calacatta Oro',      s:'Kitchen · Bathrooms · Vanities',   d:'Single-slab marble selected in person at the Carrara quarry. Gold veining matched across every surface. No two pieces are the same.',                          tex: img('calcatta.jpg') },
+  { n:'Belgian Linen',      s:'Bedding · Drapes · Day beds',      d:'400-thread stonewashed linen, laundered in rainwater collected on site. Weighted to 280gsm — the precise threshold between luxurious and effortless.',           tex: img('linen.jpg') },
+  { n:'Hand-Laid Terrazzo', s:'Terrace · Bathrooms · Hall',       d:'Rose quartz, serpentine and white marble. Mixed on site by local Mauritian craftsmen. Each floor a singular composition.',                                      tex: img('calcatta.jpg') },
+  { n:'Unlacquered Brass',  s:'Hardware · Fixtures · Lighting',   d:'From a single foundry in Burgundy. Left to develop its own patina through the first year of residence. Every handle, tap and fitting from one source.',         tex: img('brass.jpg') },
+]
+
+function MaterialsScroll() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [active, setActive] = useState(0)
+  const { ref: hRef, inView } = useInView(0.05)
+
+  useEffect(() => {
+    const container = containerRef.current
+    const track = trackRef.current
+    if (!container || !track) return
+
+    let currentX = 0
+    let targetX = 0
+    let lastScrollY = window.scrollY
+    let lastTime = performance.now()
+    let rafId: number
+
+    const getMaxX = () => track.scrollWidth - window.innerWidth
+
+    const animate = () => {
+      const diff = targetX - currentX
+      if (Math.abs(diff) > 0.5) {
+        currentX += diff * 0.08
+        track.style.transform = `translateX(${-currentX}px)`
+        setActive(Math.round((currentX / getMaxX()) * (MATERIALS.length - 1)))
+      }
+      rafId = requestAnimationFrame(animate)
+    }
+    rafId = requestAnimationFrame(animate)
+
+    const onScroll = () => {
+      const now = performance.now()
+      const dt = Math.max(1, now - lastTime)
+      const dy = window.scrollY - lastScrollY
+      const velocity = Math.abs(dy / dt)
+      const rect = container.getBoundingClientRect()
+      const sticky = container.offsetHeight - window.innerHeight
+      const baseProgress = Math.min(1, Math.max(0, -rect.top / sticky))
+      const baseX = baseProgress * getMaxX()
+      const boost = Math.min(dy * velocity * 1.8, window.innerWidth * 1.5)
+      targetX = Math.min(getMaxX(), Math.max(0, baseX + boost))
+      lastScrollY = window.scrollY
+      lastTime = now
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(rafId)
+    }
+  }, [])
+
+  return (
+    <section style={{ background: 'var(--ink)', borderTop: '1px solid var(--borderl)' }}>
+      <div ref={hRef} style={{ padding: 'clamp(80px,10vw,130px) clamp(40px,6vw,96px) clamp(60px,7vw,96px)', borderBottom: '1px solid var(--borderl)', opacity: inView?1:0, transform: inView?'none':'translateY(14px)', transition: 'all 1s ease' }}>
+        <div className="track" style={{ marginBottom: 14 }}>Craftsmanship · Drag to explore</div>
+        <h2 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(30px,4.2vw,62px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--stone)', maxWidth: 560 }}>The material world</h2>
+      </div>
+
+      <div ref={containerRef} style={{ height: `${MATERIALS.length * 60}vh`, position: 'relative' }}>
+        <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
+          <div ref={trackRef} style={{ display: 'flex', height: '100%', willChange: 'transform', transition: 'transform 0.06s linear' }}>
+            {MATERIALS.map(({ n, s, d, tex }, i) => (
+              <div key={n} style={{ minWidth: '100vw', height: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', borderRight: '1px solid var(--borderl)', position: 'relative', background: i % 2 === 0 ? 'var(--ink)' : 'var(--surface)' }}>
+
+                {/* Left — text */}
+                <div style={{ padding: 'clamp(40px,6vw,96px)', position: 'relative', zIndex: 1 }}>
+                  <div className="track" style={{ marginBottom: 18, fontSize: 8, color: 'rgba(196,160,90,0.45)' }}>{String(i+1).padStart(2,'0')} / {String(MATERIALS.length).padStart(2,'0')}</div>
+                  <div style={{ width: 40, height: 1, background: 'var(--gold)', marginBottom: 32, opacity: 0.5 }} />
+                  <h3 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(30px,4vw,64px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--stone)', marginBottom: 22, lineHeight: 1.08 }}>{n}</h3>
+                  <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(15px,1.6vw,19px)', fontStyle: 'italic', color: 'rgba(240,236,228,0.5)', lineHeight: 1.85, marginBottom: 28 }}>{d}</p>
+                  <div className="track" style={{ fontSize: 8, color: 'rgba(196,160,90,0.25)' }}>{s}</div>
+                </div>
+
+                {/* Right — texture image in diamond clip */}
+                <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(40px,5vw,80px)' }}>
+                  {/* Large ghost number behind */}
+                  <div style={{ position: 'absolute', right: '-0.04em', bottom: '-0.06em', fontFamily: 'var(--F)', fontSize: 'clamp(160px,20vw,280px)', fontWeight: 300, fontStyle: 'italic', color: 'rgba(196,160,90,0.03)', lineHeight: 1, userSelect: 'none', pointerEvents: 'none' }}>
+                    {String(i+1).padStart(2,'0')}
+                  </div>
+                  {/* Diamond shape — rotated square */}
+                  <div style={{
+                    width: 'clamp(220px,28vw,420px)',
+                    height: 'clamp(220px,28vw,420px)',
+                    transform: 'rotate(45deg)',
+                    overflow: 'hidden',
+                    boxShadow: '0 24px 80px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(196,160,90,0.12)',
+                    flexShrink: 0,
+                    position: 'relative',
+                    zIndex: 1,
+                  }}>
+                    <img
+                      src={tex}
+                      alt={n}
+                      loading="lazy"
+                      style={{
+                        width: '142%',
+                        height: '142%',
+                        objectFit: 'cover',
+                        objectPosition: 'center',
+                        transform: 'rotate(-45deg) translate(-15%, -15%)',
+                        filter: 'brightness(0.75) saturate(0.9)',
+                      }}
+                    />
+                    {/* Subtle gold tint overlay */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(196,160,90,0.06)', mixBlendMode: 'overlay' }} />
+                  </div>
+                  {/* Material name etched below diamond */}
+                  <div className="track" style={{ position: 'absolute', bottom: 'clamp(32px,4vw,56px)', left: '50%', transform: 'translateX(-50%)', fontSize: 7, color: 'rgba(196,160,90,0.3)', whiteSpace: 'nowrap', letterSpacing: '0.35em' }}>{n.toUpperCase()}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom progress */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'var(--borderl)' }}>
+            <div style={{ height: '100%', background: 'var(--gold)', width: `${(active / (MATERIALS.length-1)) * 100}%`, transition: 'width 0.15s ease' }} />
+          </div>
+
+          {/* Dots */}
+          <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, alignItems: 'center' }}>
+            {MATERIALS.map((_, i) => (
+              <div key={i} style={{ width: i === active ? 24 : 4, height: 1, background: i === active ? 'var(--gold)' : 'rgba(196,160,90,0.2)', transition: 'all 0.4s ease' }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Island ───────────────────────────────────────────────────────────────────
+function IslandSection() {
+  return (
+    <section id="island">
+      <FullBleed src={IMGS.island} eyebrow="Île aux Cerfs · Grand Baie · Le Morne" title="Minutes from one of the world's last untouched lagoons" sub="The northern lagoon of Mauritius — turquoise, warm, and almost impossibly clear." pos="center 30%" dim={0.5} />
+      <div style={{ background: 'var(--surface)', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: '1px solid var(--borderl)', borderBottom: '1px solid var(--borderl)' }}>
+        {[{v:'330',u:'days',l:'of sunshine per year'},{v:'27°',u:'avg',l:'ocean temperature'},{v:'5',u:'min',l:'to Grand Baie marina'}].map(({v,u,l},i) => (
+          <div key={l} style={{ padding:'clamp(40px,5vw,64px)', borderRight:i<2?'1px solid var(--borderl)':'none', textAlign:'center' }}>
+            <div style={{ fontFamily:'var(--F)', fontSize:'clamp(36px,5vw,72px)', fontWeight:300, fontStyle:'italic', color:'var(--gold)', lineHeight:1 }}>{v}<span style={{ fontSize:'40%', marginLeft:4, color:'var(--ash)' }}>{u}</span></div>
+            <div className="track" style={{ fontSize:8, color:'var(--ash)', marginTop:12 }}>{l}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ─── Staircase descent ────────────────────────────────────────────────────────
+function StaircaseDescent() {
+  const { ref, p } = useScrollProgress()
+  const dark = p < 0.55 ? 0 : Math.min(1, (p - 0.55) / 0.38)
+  const txt  = p < 0.70 ? 0 : Math.min(1, (p - 0.70) * 8)
+  // Subtle rotation — tilts into the dark as you descend
+  const rotate = p * 2.5
+  return (
+    <div ref={ref} style={{ minHeight: '150dvh', position: 'relative', overflow: 'hidden' }}>
+      <img
+        src={IMGS.hero}
+        alt="Descend"
+        onError={(e) => { (e.target as HTMLImageElement).src = IMGS.pool2 }}
+        style={{
+          width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top',
+          position:'absolute', inset:0,
+          transform:`scale(${1 + p * 0.05}) rotate(${rotate}deg)`,
+          transformOrigin:'center center',
+        }}
+      />
+      <div style={{ position:'absolute', inset:0, background:`rgba(3,3,8,${dark})` }} />
+      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:40, opacity:txt, transition:'opacity 0.2s' }}>
+        <div className="track" style={{ marginBottom:22, letterSpacing:'0.45em' }}>Descend · Restore · Transcend</div>
+        <h2 style={{ fontFamily:'var(--F)', fontSize:'clamp(30px,5vw,68px)', fontWeight:300, fontStyle:'italic', color:'var(--stone)', lineHeight:1.1 }}>
+          The Wellness<br />
+          <span style={{ background:'linear-gradient(90deg,var(--gold),var(--gold2),var(--gold))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>Sanctuary</span>
+        </h2>
+      </div>
+    </div>
+  )
+}
+
+// ─── Wellness ─────────────────────────────────────────────────────────────────
+function WellnessSection() {
+  const { ref, inView } = useInView()
+  return (
+    <section id="wellness" style={{ background:'var(--spa)' }}>
+      <div style={{ padding:'clamp(80px,10vw,130px) clamp(40px,6vw,96px)', textAlign:'center', borderBottom:'1px solid rgba(196,160,90,0.05)' }}>
+        <div className="track" style={{ marginBottom:20 }}>In-Residence Wellness</div>
+        <h2 style={{ fontFamily:'var(--F)', fontSize:'clamp(30px,5vw,70px)', fontWeight:300, fontStyle:'italic', color:'var(--stone)', lineHeight:1.1, marginBottom:22 }}>The Spa Sanctuary</h2>
+        <div style={{ width:1, height:60, background:'linear-gradient(to bottom,var(--gold),transparent)', margin:'0 auto 26px' }} />
+        <p style={{ fontFamily:'var(--F)', fontSize:'clamp(14px,1.5vw,18px)', fontStyle:'italic', color:'rgba(240,236,228,0.4)', maxWidth:500, margin:'0 auto', lineHeight:1.8 }}>
+          Ancient Mauritian healing traditions, reborn in volcanic stone and total silence.
+        </p>
+      </div>
+      <FullBleed src={IMGS.spa1} eyebrow="Concierge" title="Your Dedicated Curator" sub="A personal wellness director — anticipating every need before it becomes one." pos="center 30%" dim={0.5} />
+      <FullBleed src={IMGS.spa2} eyebrow="Treatment" title="The Treatment Sanctuary" sub="Volcanic stone · Cold ocean mineral · Island botanicals." align="right" dim={0.5} />
+      <div ref={ref} style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', borderTop:'1px solid rgba(196,160,90,0.05)' }}>
+        {[{n:'Hydrotherapy',d:'Heated jet pool, cold plunge, mineral steam'},{n:'Body Rituals',d:'Volcanic stone · Coconut · Ayurvedic'},{n:'Yoga Pavilion',d:'Sunrise & sunset, resident instructor'},{n:'Nutrition',d:'Ayurvedic & plant-based cuisine'}].map(({n,d},i) => (
+          <div key={n} style={{ padding:'clamp(36px,4vw,60px) clamp(22px,3vw,40px)', borderRight:i<3?'1px solid rgba(196,160,90,0.05)':'none', opacity:inView?1:0, transform:inView?'none':'translateY(14px)', transition:`all 0.9s ease ${i*0.1}s` }}>
+            <div className="track" style={{ fontSize:8, marginBottom:12 }}>{n}</div>
+            <p style={{ fontFamily:'var(--F)', fontSize:14, fontStyle:'italic', color:'rgba(240,236,228,0.3)', lineHeight:1.7 }}>{d}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// ─── INTERRUPT 5: Counting stats ──────────────────────────────────────────────
+function CountingStats() {
+  const { ref, inView } = useInView(0.3)
+  const stats = [
+    { target:13.89, suffix:'%', label:'RPPI Growth Q3 2025',   note:'Statistics Mauritius', dec:2 },
+    { target:140,   suffix:'%', label:'Cumulative since 2019', note:'Property price index',  dec:0 },
+    { target:9,     suffix:'%', label:'Gross rental yield',    note:'Short-term coastal',    dec:0 },
+    { target:67,    suffix:'%', label:'Wealth growth 2015–25', note:"Africa's strongest",    dec:0 },
+  ]
+  return (
+    <section ref={ref} style={{ background:'var(--surface)', borderTop:'1px solid var(--borderl)', borderBottom:'1px solid var(--borderl)' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
+        {stats.map(({ target, suffix, label, note, dec }, i) => (
+          <CountStat key={label} target={target} suffix={suffix} label={label} note={note} dec={dec} active={inView} delay={i*160} border={i<3} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CountStat({ target, suffix, label, note, dec, active, delay, border }: { target:number; suffix:string; label:string; note:string; dec:number; active:boolean; delay:number; border:boolean }) {
+  const [go, setGo] = useState(false)
+  useEffect(() => { if (active) { const t = setTimeout(() => setGo(true), delay); return () => clearTimeout(t) } }, [active, delay])
+  const val = useCountUp(target, go, 2200, dec)
+  return (
+    <div style={{ padding:'clamp(48px,6vw,80px) clamp(24px,3.5vw,48px)', borderRight:border?'1px solid var(--borderl)':'none', textAlign:'center' }}>
+      <div style={{ fontFamily:'var(--F)', fontSize:'clamp(44px,6vw,88px)', fontWeight:300, fontStyle:'italic', lineHeight:1, color:'var(--gold)', marginBottom:12 }}>
+        {dec === 0 ? Math.round(val) : val.toFixed(dec)}{suffix}
+      </div>
+      <div className="track" style={{ fontSize:8, marginBottom:8 }}>{label}</div>
+      <div style={{ fontFamily:'var(--F)', fontSize:12, fontStyle:'italic', color:'var(--ash)' }}>{note}</div>
+    </div>
+  )
+}
+
+// ─── Investment ───────────────────────────────────────────────────────────────
+function InvestmentSection() {
+  const { ref, inView } = useInView()
+  return (
+    <section id="investment" style={{ background:'var(--black)' }}>
+      <div style={{ padding:'clamp(80px,10vw,140px) clamp(40px,6vw,96px) 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'clamp(40px,6vw,100px)' }} className="stack-m">
+        <div ref={ref} style={{ opacity:inView?1:0, transform:inView?'none':'translateY(18px)', transition:'all 1.1s ease' }}>
+          <div className="track" style={{ marginBottom:18 }}>Market Intelligence · 2025–2026</div>
+          <h2 style={{ fontFamily:'var(--F)', fontSize:'clamp(28px,3.8vw,56px)', fontWeight:300, fontStyle:'italic', lineHeight:1.1, color:'var(--stone)', marginBottom:24 }}>The case for Mauritius</h2>
+          <p style={{ fontFamily:'var(--F)', fontSize:'clamp(14px,1.5vw,17px)', fontStyle:'italic', lineHeight:1.85, color:'var(--smoke)' }}>
+            Five reasons converge into one irrefutable argument: capital appreciation, rental income, permanent residency, zero capital gains, and a way of life unavailable anywhere else on earth.
+          </p>
+        </div>
+        <div style={{ borderLeft:'1px solid var(--borderl)', paddingLeft:'clamp(36px,5vw,80px)', display:'flex', flexDirection:'column', gap:0 }}>
+          {[
+            { e:'Price Appreciation', t:'8–12% forecast growth in 2026',  d:'VEFA off-plan buyers lock in prices 30–60% below completed units with bank-backed completion guarantees under Mauritian law.' },
+            { e:'Permanent Residency', t:'Family PRP from £1.25M',         d:'Buyer, spouse and all dependants. Valid for the duration of ownership. Renewable for 20 years.' },
+            { e:'Tax Position',        t:'0% CGT. 0% Estate Tax.',         d:'No capital gains tax, no inheritance tax, no annual property tax. Full free repatriation of capital and profits.' },
+            { e:'Act Before July 2026',t:'Registration duty doubles',      d:'Non-citizen duty rises from 5% to 10% on 1 July 2026. Buyers exchanging now secure the lower rate and pre-construction pricing.' },
+          ].map(({ e, t, d }, i) => (
+            <div key={e} style={{ padding:'clamp(24px,3vw,36px) 0', borderBottom:'1px solid var(--borderl)', opacity:inView?1:0, transform:inView?'none':'translateX(16px)', transition:`all 0.9s ease ${i*0.12}s` }}>
+              <div className="track" style={{ fontSize:7, marginBottom:7 }}>{e}</div>
+              <div style={{ fontFamily:'var(--F)', fontSize:'clamp(15px,1.7vw,20px)', fontStyle:'italic', color:'var(--stone)', marginBottom:7 }}>{t}</div>
+              <div style={{ fontFamily:'var(--F)', fontSize:13, fontStyle:'italic', color:'var(--ash)', lineHeight:1.7 }}>{d}</div>
             </div>
           ))}
         </div>
       </div>
-    </section>
-  )
-}
 
-// ── Investment ───────────────────────────────────────────────────────────────
-function InvestBlock({ eyebrow, title, body, tag, borderR, borderT }: { eyebrow:string; title:string; body:string; tag:string; borderR?:boolean; borderT?:boolean }) {
-  const { ref, inView } = useInView()
-  const tilt = useTilt(4)
-  return (
-    <div ref={ref} style={{ padding:'clamp(48px,5vw,80px) clamp(24px,5vw,72px)', borderRight:borderR?'1px solid var(--border)':'none', borderTop:borderT?'1px solid var(--border)':'none', opacity:inView?1:0, transform:inView?'none':'translateY(20px)', transition:'all 0.9s ease' }}>
-      <div ref={tilt.ref} onMouseMove={tilt.onMove} onMouseLeave={tilt.onLeave} className="tilt-card">
-        <div className="eyebrow" style={{ marginBottom:'16px' }}>{eyebrow}</div>
-        <h3 className="disp" style={{ fontSize:'clamp(22px,2.5vw,38px)', fontWeight:400, fontStyle:'italic', marginBottom:'18px', lineHeight:1.2 }}>{title}</h3>
-        <p style={{ fontSize:'13px', lineHeight:1.9, color:'var(--text-2)', marginBottom:'24px' }}>{body}</p>
-        <div style={{ display:'inline-block', padding:'7px 16px', border:'1px solid var(--border-hi)', fontSize:'9px', letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--gold)' }}>{tag}</div>
-      </div>
-    </div>
-  )
-}
-
-function InvestmentSection() {
-  const { ref, inView } = useInView()
-  const stats = [
-    { v:'+13.89%', l:'RPPI Growth Q3 2025',    note:'Statistics Mauritius' },
-    { v:'+140%',   l:'Cumulative since 2019',   note:'More than doubled' },
-    { v:'1.436M',  l:'Tourist arrivals 2025',   note:'+3.9% year-on-year' },
-    { v:'₨21.39B', l:'FDI in real estate 2025', note:'Luxury schemes dominant' },
-  ]
-  return (
-    <section id="investment" style={{ background:'var(--void)' }}>
-      <div style={{ padding:'clamp(80px,10vw,140px) clamp(24px,8vw,120px) 0', textAlign:'center' }}>
-        <div className="eyebrow" style={{ marginBottom:'20px' }}>Market Intelligence · 2025–2026</div>
-        <h2 className="disp" style={{ fontSize:'clamp(34px,5vw,76px)', fontWeight:300, fontStyle:'italic', lineHeight:1.1, marginBottom:'24px' }}>
-          The Case for<br /><span className="gold-grad">Mauritian Property</span>
-        </h2>
-        <p className="acc" style={{ fontSize:'clamp(13px,1.4vw,16px)', lineHeight:1.9, color:'var(--text-2)', maxWidth:'580px', margin:'0 auto 72px' }}>
-          Capital appreciation. Rental income. Permanent residency. Tax optimisation. Lifestyle. Five compelling reasons, one exceptional investment.
+      {/* +67% callout */}
+      <div style={{ padding:'clamp(80px,9vw,120px) clamp(40px,6vw,96px)', textAlign:'center', marginTop:'clamp(60px,8vw,100px)', borderTop:'1px solid var(--borderl)' }}>
+        <div className="track" style={{ marginBottom:18 }}>Africa's Strongest Decade of Wealth Growth</div>
+        <div style={{ fontFamily:'var(--F)', fontSize:'clamp(80px,12vw,160px)', fontWeight:300, fontStyle:'italic', color:'var(--gold)', lineHeight:1, marginBottom:18 }}>+67%</div>
+        <p style={{ fontFamily:'var(--F)', fontSize:'clamp(14px,1.5vw,18px)', fontStyle:'italic', color:'var(--smoke)', maxWidth:440, margin:'0 auto 44px', lineHeight:1.8 }}>
+          Total investable wealth growth, Mauritius 2015–2025.
         </p>
-      </div>
-      <div ref={ref} className="stat-grid" style={{ borderTop:'1px solid var(--border)', borderBottom:'1px solid var(--border)' }}>
-        {stats.map(({v,l,note},i) => (
-          <div key={l} style={{ padding:'clamp(40px,5vw,72px) clamp(24px,4vw,56px)', borderLeft:i>0?'1px solid var(--border)':'none', opacity:inView?1:0, transform:inView?'none':'translateY(24px)', transition:`all 0.85s ease ${i*0.1}s` }}>
-            <div className="disp gold-grad" style={{ fontSize:'clamp(28px,3.5vw,52px)', fontWeight:300, lineHeight:1, marginBottom:'10px' }}>{v}</div>
-            <div style={{ fontSize:'11px', color:'var(--text-2)', letterSpacing:'0.08em', marginBottom:'6px' }}>{l}</div>
-            <div className="eyebrow" style={{ fontSize:'8px', color:'var(--text-3)' }}>{note}</div>
-          </div>
-        ))}
-      </div>
-      <div className="inv-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', borderBottom:'1px solid var(--border)' }}>
-        <InvestBlock eyebrow="Price Appreciation" title="Unmatched Capital Growth" body="Luxury and coastal villas in prime corridors — Grand Baie, Le Morne, Tamarin, Rivière Noire — are forecast to grow 8–12% in 2026. Foreign-buyer-eligible properties saw listing prices rise +12.62% year-on-year in 2025. VEFA off-plan buyers typically lock in prices 30–60% below completed units, with bank-backed completion guarantees under Mauritian law." tag="RPPI +13.89% · Q3 2025" borderR />
-        <InvestBlock eyebrow="Rental Income" title="Superior Yield Profile" body="Gross rental yields on luxury villas: 3–5% long-term, rising to 5–9% for short-term holiday rentals in high-occupancy coastal areas. Rents rose sharply — +11.1% for apartments, +12.5% for houses in 2025 — driven by 1.436 million tourist arrivals, including +33.5% growth from India." tag="Up to 9% gross yield" />
-        <InvestBlock eyebrow="Permanent Residency" title="Live Where Others Holiday" body="Purchase a qualifying VEFA villa at ≥ USD 375,000 under approved EDB schemes and receive a Permanent Residence Permit for the buyer, spouse, and all dependents. Valid as long as the property is owned; renewable for 20 years. A new Golden Visa ($1M route) launched in 2026." tag="PRP for family included" borderR borderT />
-        <InvestBlock eyebrow="Tax Optimisation" title="Zero Tax on Wealth" body="0% Capital Gains Tax. 0% Inheritance, Estate, or Gift Tax. No annual property tax. 0% Withholding Tax on dividends and interest. Full free repatriation of capital and profits. Act now: non-citizen registration duty rises from 5% to 10% from 1 July 2026." tag="0% CGT · 0% Estate Tax" borderT />
-      </div>
-      <div style={{ padding:'clamp(64px,8vw,112px) clamp(24px,8vw,120px)', textAlign:'center', background:'var(--surface)' }}>
-        <div className="eyebrow" style={{ marginBottom:'20px' }}>Africa's Strongest Decade of Wealth Growth</div>
-        <div className="disp gold-grad" style={{ fontSize:'clamp(48px,7vw,100px)', fontWeight:300, lineHeight:1, marginBottom:'16px' }}>+67%</div>
-        <p className="acc" style={{ fontSize:'15px', color:'var(--text-2)', maxWidth:'480px', margin:'0 auto 40px', lineHeight:1.85 }}>
-          Total investable wealth growth in Mauritius, 2015–2025. The island continues to attract relocating millionaires seeking stability, tax efficiency, and an unmatched quality of life.
-        </p>
-        <a href="#contact" className="btn btn-s">Request Investment Brief</a>
+        <a href="#contact" className="btn btn-gold">Request Investment Brief</a>
       </div>
     </section>
   )
 }
 
-// ── Contact ──────────────────────────────────────────────────────────────────
+// ─── Contact ──────────────────────────────────────────────────────────────────
 function ContactSection() {
   const { ref, inView } = useInView()
   return (
-    <section id="contact" style={{ background:'var(--obsidian)', borderTop:'1px solid var(--border)' }}>
-      <div ref={ref} className="contact-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'80vh' }}>
-        <div style={{ padding:'clamp(64px,8vw,120px) clamp(32px,6vw,100px)', display:'flex', flexDirection:'column', justifyContent:'center', borderRight:'1px solid var(--border)' }}>
-          <div className="eyebrow" style={{ marginBottom:'20px', opacity:inView?1:0, transition:'opacity 0.8s ease 0.1s' }}>Private Access Only</div>
-          <h2 className="disp" style={{ fontSize:'clamp(32px,4vw,64px)', fontWeight:300, fontStyle:'italic', lineHeight:1.12, marginBottom:'24px', opacity:inView?1:0, transform:inView?'none':'translateY(20px)', transition:'all 0.9s ease 0.2s' }}>
-            Arrange a<br />Private Viewing
-          </h2>
-          <p className="acc" style={{ fontSize:'15px', lineHeight:1.9, color:'var(--text-2)', maxWidth:'360px', marginBottom:'44px', opacity:inView?1:0, transition:'all 0.9s ease 0.35s' }}>
-            Villa Azur is available for qualified buyers by private appointment only. Our advisors are available around the clock, across all time zones.
-          </p>
-          <div style={{ display:'flex', flexDirection:'column', gap:'10px', opacity:inView?1:0, transition:'all 0.9s ease 0.45s' }}>
-            <div className="eyebrow" style={{ color:'var(--text-3)' }}>hello@edenestates.mu</div>
-            <div className="eyebrow" style={{ color:'var(--text-3)' }}>+230 5000 0000</div>
+    <section id="contact" style={{ background:'var(--surface)', borderTop:'1px solid var(--borderl)' }}>
+      <div ref={ref} style={{ display:'grid', gridTemplateColumns:'1fr 1fr', minHeight:'80vh' }} className="stack-m">
+        <div style={{ padding:'clamp(72px,8vw,120px) clamp(40px,6vw,96px)', display:'flex', flexDirection:'column', justifyContent:'center', borderRight:'1px solid var(--borderl)' }}>
+          <div style={{ opacity:inView?1:0, transform:inView?'none':'translateY(16px)', transition:'all 1.1s ease 0.1s' }}>
+            <div className="track" style={{ marginBottom:22 }}>Private Access Only</div>
+            <h2 style={{ fontFamily:'var(--F)', fontSize:'clamp(30px,4vw,56px)', fontWeight:300, fontStyle:'italic', lineHeight:1.1, marginBottom:24, color:'var(--stone)' }}>Arrange a<br />Private Viewing</h2>
+            <p style={{ fontFamily:'var(--F)', fontSize:'clamp(14px,1.4vw,17px)', fontStyle:'italic', lineHeight:1.85, color:'var(--smoke)', maxWidth:340, marginBottom:40 }}>
+              All three estates are available by private appointment only. Our advisors are reachable around the clock.
+            </p>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div className="track" style={{ fontSize:8, color:'var(--ash)' }}>hello@edenestates.mu</div>
+              <div className="track" style={{ fontSize:8, color:'var(--ash)' }}>+230 5000 0000</div>
+            </div>
           </div>
         </div>
-        <div style={{ padding:'clamp(64px,8vw,120px) clamp(32px,6vw,100px)', display:'flex', flexDirection:'column', justifyContent:'center' }}>
-          <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-            {[{p:'Full Name',t:'text'},{p:'Email Address',t:'email'},{p:'Phone / WhatsApp',t:'tel'},{p:'Country of Residence',t:'text'}].map(({p,t}) => (
+        <div style={{ padding:'clamp(72px,8vw,120px) clamp(40px,6vw,96px)', display:'flex', flexDirection:'column', justifyContent:'center', opacity:inView?1:0, transition:'opacity 1.1s ease 0.3s' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:28 }}>
+            {[{p:'Full Name',t:'text'},{p:'Email Address',t:'email'},{p:'Phone · WhatsApp',t:'tel'},{p:'Country of Residence',t:'text'}].map(({p,t}) => (
               <input key={p} type={t} placeholder={p} />
             ))}
-            <textarea placeholder="Your enquiry or preferred viewing dates" rows={4} style={{ resize:'none' }} />
-            <a href="mailto:hello@edenestates.mu" className="btn btn-s" style={{ textAlign:'center', marginTop:'8px' }}>Submit Private Enquiry</a>
+            <textarea placeholder="Your enquiry or preferred dates" rows={3} style={{ resize:'none' }} />
+            <a href="mailto:hello@edenestates.mu" className="btn btn-gold" style={{ textAlign:'center', marginTop:8 }}>Submit Enquiry</a>
           </div>
         </div>
       </div>
@@ -636,41 +1059,58 @@ function ContactSection() {
   )
 }
 
+// ─── Footer ───────────────────────────────────────────────────────────────────
 function Footer() {
   return (
-    <footer style={{ padding:'36px 56px', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'16px', background:'var(--void)' }}>
-      <span className="disp" style={{ fontSize:'13px', fontWeight:300, letterSpacing:'0.18em', color:'var(--text-3)' }}>ÉDEN ESTATES</span>
-      <span className="eyebrow" style={{ color:'var(--text-3)', fontSize:'8px' }}>© 2026 · Grand Baie, Mauritius · All rights reserved</span>
-      <span className="eyebrow" style={{ color:'var(--text-3)', fontSize:'8px' }}>Villa Azur · $3,750,000 USD</span>
+    <footer style={{ background:'var(--black)', borderTop:'1px solid var(--borderl)', padding:'clamp(28px,4vw,48px) clamp(40px,6vw,96px)', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
+      <span style={{ fontFamily:'var(--F)', fontSize:13, fontWeight:300, fontStyle:'italic', letterSpacing:'0.2em', color:'var(--ash)' }}>ÉDEN ESTATES</span>
+      <span className="track" style={{ fontSize:7, color:'var(--ash)' }}>© 2026 · Grand Baie, Mauritius</span>
+      <span className="track" style={{ fontSize:7, color:'var(--ash)' }}>From £1,250,000</span>
     </footer>
   )
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 function HomePage() {
   return (
     <>
       <GlobalStyles />
+      <LoadCurtain />
+      <CustomCursor />
+      <DragScroll />
+      <ProgressBar />
       <NavBar />
       <Hero />
-      <SecondImage />
 
-      {/* Third image — 3D rotate-in */}
-      <Panel3D src={THIRD_IMG} label="Exterior" title="The Estate" sub="Where architecture meets the Indian Ocean — every angle considered, every surface intentional." index={0} id="estate-detail" />
+      {/* WOW capture — full bleed, fades in from dark after hero */}
+      <WowCapture />
 
-      {/* Gallery — alternate 3 styles */}
-      <PanelFloat    {...GALLERY[0]} index={1} />
-      <PanelShutter  {...GALLERY[1]} index={2} />
-      <Panel3D       {...GALLERY[2]} index={3} />
-      <PanelFloat    {...GALLERY[3]} index={4} />
-      <PanelShutter  {...GALLERY[4]} index={5} />
-      <Panel3D       {...GALLERY[5]} index={6} />
+      {/* INTERRUPT: Horizontal villa photo scroll */}
+      <VillaScroll />
 
-      <SpecsBar />
-      <FeaturesStrip />
-      <StaircaseTransition />
+      {/* INTERRUPT: Villa tiers */}
+      <VillaTiers />
+
+      {/* INTERRUPT: Horizontal materials */}
+      <MaterialsScroll />
+
+      {/* Island */}
+      <IslandSection />
+
+      {/* INTERRUPT: Quote */}
+      <QuoteMoment quote="Not merely a home. A permanent address in the world's most tax-efficient paradise. From £1,250,000." attr="Permanent Residence Permit included for buyer, spouse and dependants" />
+
+      {/* Staircase → Wellness */}
+      <StaircaseDescent />
       <WellnessSection />
+
+      {/* INTERRUPT: Counting stats */}
+      <CountingStats />
+
+      {/* Investment */}
       <InvestmentSection />
+
+      {/* Contact */}
       <ContactSection />
       <Footer />
     </>
