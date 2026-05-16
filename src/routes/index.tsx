@@ -104,38 +104,38 @@ function CustomCursor() {
 // ─── Drag-to-scroll ───────────────────────────────────────────────────────────
 function DragScroll() {
   useEffect(() => {
-    let startY = 0
+    let startY    = 0
     let startScroll = 0
-    let lastY = 0
-    let lastTime = 0
-    let velocity = 0
+    let lastY     = 0
+    let velocity  = 0
+    let lastTime  = performance.now()
     let isDragging = false
     let rafId: number
 
     const onDown = (e: MouseEvent) => {
-      // Don't hijack clicks on interactive elements
       const t = e.target as HTMLElement
       if (t.closest('a, button, input, textarea, select')) return
-      isDragging = true
-      startY = e.clientY
+      isDragging  = true
+      startY      = e.clientY
       startScroll = window.scrollY
-      lastY = e.clientY
-      lastTime = performance.now()
-      velocity = 0
+      lastY       = e.clientY
+      lastTime    = performance.now()
+      velocity    = 0
+      cancelAnimationFrame(rafId)
       document.body.classList.add('dragging')
       document.body.style.userSelect = 'none'
-      document.body.style.cursor = 'none'
     }
 
     const onMove = (e: MouseEvent) => {
       if (!isDragging) return
       const now = performance.now()
-      const dt = Math.max(1, now - lastTime)
-      velocity = (lastY - e.clientY) / dt
-      lastY = e.clientY
-      lastTime = now
-      const delta = startY - e.clientY
-      window.scrollTo({ top: startScroll + delta * 1.4, behavior: 'instant' as ScrollBehavior })
+      const dt  = Math.max(1, now - lastTime)
+      // velocity in px/ms — used only for the gentle coast on release
+      velocity  = (lastY - e.clientY) / dt
+      lastY     = e.clientY
+      lastTime  = now
+      // Pure 1:1 — page moves exactly as far as your hand
+      window.scrollTo({ top: startScroll + (startY - e.clientY), behavior: 'instant' as ScrollBehavior })
     }
 
     const onUp = () => {
@@ -144,13 +144,13 @@ function DragScroll() {
       document.body.classList.remove('dragging')
       document.body.style.userSelect = ''
 
-      // Momentum coast
-      const momentumV = velocity * 400
-      let remaining = momentumV
+      // Gentle coast — short, no overshoot
+      // Clamp velocity so it never rockets away
+      let v = Math.max(-2, Math.min(2, velocity)) * 80 // max ~160px coast
       const coast = () => {
-        if (Math.abs(remaining) < 0.5) return
-        remaining *= 0.92
-        window.scrollBy({ top: remaining, behavior: 'instant' as ScrollBehavior })
+        if (Math.abs(v) < 0.3) return
+        v *= 0.88  // slow decay — feels like heavy fabric settling
+        window.scrollBy({ top: v, behavior: 'instant' as ScrollBehavior })
         rafId = requestAnimationFrame(coast)
       }
       rafId = requestAnimationFrame(coast)
@@ -158,11 +158,11 @@ function DragScroll() {
 
     window.addEventListener('mousedown', onDown)
     window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('mouseup',   onUp)
     return () => {
       window.removeEventListener('mousedown', onDown)
       window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('mouseup',   onUp)
       cancelAnimationFrame(rafId)
     }
   }, [])
@@ -191,30 +191,33 @@ function LoadCurtain() {
 }
 
 const IMGS = {
-  hero:    img('iron-wood-house-earth-lines-architects_18.jpg'),
-  living:  img('Screenshot 2026-05-14 201935.png'),
-  horizon: img('Screenshot 2026-05-14 201944.png'),
-  pool:    img('Screenshot 2026-05-14 202001.png'),
-  dining:  img('Screenshot 2026-05-14 202012.png'),
-  garden:  img('Screenshot 2026-05-14 202025.png'),
-  master:  img('Screenshot 2026-05-14 202036.png'),
-  detail:  img('Screenshot 2026-05-14 202054.png'),
-  spa1:    img('Screenshot 2026-05-14 202025.png'),
-  spa2:    img('Screenshot 2026-05-15 220411.png'),
-  island:  img('grok-image-86070f82-2171-4501-8fe6-d6f72d7d1dcb.png'),
-  pool2:   img('205032606_4198387713573399_8106792087768550505_n.jpg'),
+  hero:      img('iron-wood-house-earth-lines-architects_18.jpg'),
+  window:    img('window.jpg'),
+  entrance:  img('entrance.jpg'),
+  interior:  img('interior.jpg'),
+  pool2:     img('infinity pool 2.jpg'),
+  pool:      img('infinity pool.jpg'),
+  living:    img('Screenshot 2026-05-14 201935.png'),
+  horizon:   img('Screenshot 2026-05-14 201944.png'),
+  dining:    img('Screenshot 2026-05-14 202012.png'),
+  master:    img('Screenshot 2026-05-14 202036.png'),
+  detail:    img('Screenshot 2026-05-14 202054.png'),
+  spa1:      img('spa1.jpg'),
+  spa2:      img('spa2.jpg'),
+  island:    img('grok-image-86070f82-2171-4501-8fe6-d6f72d7d1dcb.png'),
+  mcclean:   img('205032606_4198387713573399_8106792087768550505_n.jpg'),
 }
 
 // Villa gallery — the horizontal scroll sequence
 const VILLA_SLIDES = [
-  { src: IMGS.horizon, label: 'Arrival',        caption: 'A private approach through two hectares of tropical canopy' },
-  { src: IMGS.pool2,   label: 'The Pool',       caption: 'Infinity edge dissolving into the Indian Ocean at blue hour' },
-  { src: IMGS.living,  label: 'Living',         caption: 'Floor-to-ceiling glass — interior and ocean as one' },
-  { src: IMGS.horizon, label: 'The Horizon',    caption: 'Unobstructed panorama across the northern lagoon' },
-  { src: IMGS.pool,    label: 'Infinity Edge',  caption: 'A pool that ends where the Indian Ocean begins' },
-  { src: IMGS.dining,  label: 'Al Fresco',      caption: 'A covered pavilion for twelve. Salt air and candlelight.' },
-  { src: IMGS.master,  label: 'Master Suite',   caption: 'Five en-suite sanctuaries of reclaimed teak and stone' },
-  { src: IMGS.detail,  label: 'Detail',         caption: '2,400m² of curated botanical landscape' },
+  { src: IMGS.entrance,  label: 'Arrival',       caption: 'A private approach through two hectares of tropical canopy' },
+  { src: IMGS.window,    label: 'The View',      caption: 'Light and landscape held in a single frame' },
+  { src: IMGS.interior,  label: 'Interior',      caption: 'Floor-to-ceiling glass dissolving interior and ocean into one' },
+  { src: IMGS.living,    label: 'Living',        caption: 'Every surface chosen. Every detail earned.' },
+  { src: IMGS.pool2,     label: 'Infinity Edge', caption: 'A pool that ends where the Indian Ocean begins' },
+  { src: IMGS.pool,      label: 'The Pool',      caption: 'Infinity edge dissolving into the horizon at blue hour' },
+  { src: IMGS.dining,    label: 'Al Fresco',     caption: 'A covered pavilion for twelve. Salt air and candlelight.' },
+  { src: IMGS.master,    label: 'Master Suite',  caption: 'Five en-suite sanctuaries of reclaimed teak and stone' },
 ]
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -286,7 +289,7 @@ function GlobalStyles() {
         --G: 'Jost', sans-serif;
       }
 
-      html { scroll-behavior: smooth; }
+      html { scroll-behavior: auto; }
       body {
         background: var(--black);
         color: var(--stone);
@@ -500,30 +503,197 @@ function FullBleed({ src, eyebrow, title, sub, align = 'left', pos = 'center', d
 }
 
 // ─── Wow capture — full bleed image immediately after hero ────────────────────
-function WowCapture() {
-  const { ref: pRef, p } = useScrollProgress()
-  const { ref: iRef, inView } = useInView(0.05)
-  const ref = useCallback((el: HTMLDivElement|null) => {
-    ;(pRef as any).current = el;
-    ;(iRef as any).current = el
+// ─── Cinematic descent sequence ───────────────────────────────────────────────
+// Each scene: image fills 100dvh, sticky. As you scroll through its allocated
+// height it darkens + blurs at the exit, then the next image emerges from black.
+// The staircase also darkens+blurs as you scroll, so the cut to the next scene
+// happens through total darkness — seamless, cinematic.
+
+const DESCENT_SCENES = [
+  {
+    src: IMGS.hero,
+    label: null,
+    caption: null,
+    pos: 'center 20%',
+    // Starts clear, darkens+blurs as exit approaches
+  },
+  {
+    src: IMGS.entrance,
+    label: 'Arrival',
+    caption: 'A private approach through two hectares of tropical canopy',
+    pos: 'center 40%',
+  },
+  {
+    src: IMGS.window,
+    label: 'The View',
+    caption: 'Light and landscape held in a single frame',
+    pos: 'center 50%',
+  },
+  {
+    src: IMGS.interior,
+    label: 'Interior',
+    caption: 'Every surface chosen. Every detail earned.',
+    pos: 'center 35%',
+  },
+  {
+    src: IMGS.pool2,
+    label: 'Infinity Edge',
+    caption: 'Where the pool dissolves into the Indian Ocean',
+    pos: 'center 45%',
+  },
+  {
+    src: IMGS.pool,
+    label: 'The Pool',
+    caption: 'Blue hour. Salt air. Total silence.',
+    pos: 'center 40%',
+  },
+]
+
+function CinematicDescent() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [progress, setProgress] = useState(0) // 0→1 through the full sequence
+
+  useEffect(() => {
+    const onScroll = () => {
+      const el = containerRef.current; if (!el) return
+      const rect = el.getBoundingClientRect()
+      const total = el.offsetHeight - window.innerHeight
+      setProgress(Math.min(1, Math.max(0, -rect.top / total)))
+    }
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
-  const imgY = `${(p - 0.5) * -10}%`
+
+  const n = DESCENT_SCENES.length
+  // Which scene is active and how far through it (0→1)
+  const sceneF      = progress * n
+  const sceneIdx    = Math.min(n - 1, Math.floor(sceneF))
+  const sceneP      = sceneF - sceneIdx // 0→1 within current scene
+
+  // Exit transition: last 30% of each scene → darkens + blurs
+  const exitStart   = 0.7
+  const exitP       = sceneP < exitStart ? 0 : (sceneP - exitStart) / (1 - exitStart)
+  const exitDark    = exitP               // 0→1 opacity of black overlay
+  const exitBlur    = exitP * 14         // 0→14px blur
+
+  // Entry transition: first 30% of each scene → still dark+blurred, clears
+  const entryEnd    = 0.3
+  const entryP      = sceneP > entryEnd ? 0 : 1 - (sceneP / entryEnd)
+  const entryDark   = entryP
+  const entryBlur   = entryP * 14
+
+  // Combined overlay for this scene
+  const dark        = Math.max(exitDark, entryDark)
+  const blur        = Math.max(exitBlur, entryBlur)
+
+  const scene       = DESCENT_SCENES[sceneIdx]
+  const nextScene   = DESCENT_SCENES[sceneIdx + 1]
+
+  // Caption appears in middle of each scene (30%–70%)
+  const captionOpacity = sceneP > 0.25 && sceneP < 0.78
+    ? Math.min(1, (sceneP - 0.25) / 0.15)
+    : sceneP >= 0.78
+      ? 1 - (sceneP - 0.78) / 0.15
+      : 0
+
   return (
-    <section ref={ref} style={{ height: '100dvh', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', inset: '-8% 0' }}>
-        <img src={IMGS.pool2} alt="Villa Azur" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%', transform: `translateY(${imgY})`, willChange: 'transform' }} />
+    <div
+      ref={containerRef}
+      id="estate"
+      style={{ height: `${n * 220}vh`, position: 'relative' }}
+    >
+      <div style={{ position: 'sticky', top: 0, height: '100dvh', overflow: 'hidden', background: '#000' }}>
+
+        {/* Current scene image */}
+        <img
+          key={`scene-${sceneIdx}`}
+          src={scene.src}
+          alt={scene.label ?? 'Villa Azur'}
+          onError={(e) => { (e.target as HTMLImageElement).src = IMGS.mcclean }}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover', objectPosition: scene.pos,
+            filter: `blur(${blur}px)`,
+            transform: `scale(${1 + blur * 0.004})`, // scale up slightly to hide blur edges
+            transition: 'filter 0.05s linear, transform 0.05s linear',
+            willChange: 'filter, transform',
+          }}
+        />
+
+        {/* Next scene pre-loads invisibly */}
+        {nextScene && (
+          <img
+            key={`next-${sceneIdx}`}
+            src={nextScene.src}
+            alt="preload"
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+          />
+        )}
+
+        {/* Dark overlay — driven by scroll */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `rgba(3,3,6,${dark})`,
+          transition: 'background 0.04s linear',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Permanent bottom gradient */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(5,5,7,0.8) 0%, transparent 45%)', pointerEvents: 'none' }} />
+
+        {/* Scene counter — top left */}
+        <div className="track" style={{ position: 'absolute', top: 28, left: 'clamp(28px,4vw,56px)', fontSize: 8, color: 'rgba(196,160,90,0.35)', opacity: sceneIdx > 0 ? 1 : 0, transition: 'opacity 0.8s' }}>
+          {String(sceneIdx).padStart(2,'0')} / {String(n - 1).padStart(2,'0')}
+        </div>
+
+        {/* Caption — fades in mid-scene, out near end */}
+        {scene.label && (
+          <div style={{
+            position: 'absolute',
+            bottom: 'clamp(56px,7vh,96px)',
+            left: 'clamp(40px,6vw,96px)',
+            opacity: captionOpacity,
+            transform: `translateY(${(1 - Math.min(1, captionOpacity * 2)) * 12}px)`,
+            transition: 'opacity 0.12s, transform 0.12s',
+            maxWidth: 560,
+          }}>
+            <div className="track" style={{ marginBottom: 14, fontSize: 9 }}>{scene.label}</div>
+            <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(22px,3vw,44px)', fontStyle: 'italic', fontWeight: 300, color: 'var(--stone)', lineHeight: 1.18 }}>
+              {scene.caption}
+            </p>
+          </div>
+        )}
+
+        {/* Hero-specific text — only on scene 0 */}
+        {sceneIdx === 0 && (
+          <div style={{
+            position: 'absolute',
+            bottom: 'clamp(56px,7vh,96px)',
+            left: 'clamp(40px,6vw,96px)',
+            opacity: Math.max(0, 1 - sceneP * 3.5),
+            transition: 'opacity 0.1s',
+          }}>
+            <div className="track" style={{ marginBottom: 10, fontSize: 8 }}>Villa Azur · Grand Baie · Mauritius</div>
+            <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(13px,1.4vw,16px)', fontStyle: 'italic', color: 'rgba(240,236,228,0.55)', maxWidth: 360, lineHeight: 1.75 }}>
+              From £1,250,000 · Permanent residency included
+            </p>
+          </div>
+        )}
+
+        {/* Progress line — bottom */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'rgba(196,160,90,0.08)' }}>
+          <div style={{ height: '100%', background: 'var(--gold)', width: `${progress * 100}%`, transition: 'width 0.05s linear' }} />
+        </div>
+
+        {/* Scene dots */}
+        <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
+          {DESCENT_SCENES.map((_, i) => (
+            <div key={i} style={{ width: i === sceneIdx ? 20 : 4, height: 1, background: i === sceneIdx ? 'var(--gold)' : 'rgba(196,160,90,0.2)', transition: 'all 0.4s ease' }} />
+          ))}
+        </div>
       </div>
-      {/* Very subtle vignette — let the image breathe */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(5,5,7,0.35) 0%, transparent 30%, transparent 65%, rgba(5,5,7,0.7) 100%)' }} />
-      {/* Fade in from black — the transition from hero */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(5,5,7,1)', opacity: inView ? 0 : 1, transition: 'opacity 1.8s ease', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: 'clamp(48px,6vh,80px)', left: 'clamp(40px,6vw,96px)', opacity: inView ? 1 : 0, transform: inView ? 'none' : 'translateY(16px)', transition: 'all 1.6s ease 0.4s' }}>
-        <div className="track" style={{ marginBottom: 14, fontSize: 8 }}>Villa Azur · Grand Baie</div>
-        <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(18px,2.5vw,36px)', fontStyle: 'italic', fontWeight: 300, color: 'var(--stone)', lineHeight: 1.3, maxWidth: 480 }}>
-          Where the pool ends<br />and the Indian Ocean begins
-        </p>
-      </div>
-    </section>
+    </div>
   )
 }
 
@@ -1082,8 +1252,8 @@ function HomePage() {
       <NavBar />
       <Hero />
 
-      {/* WOW capture — full bleed, fades in from dark after hero */}
-      <WowCapture />
+      {/* Cinematic descent — staircase → entrance → window → interior → pool2 → pool */}
+      <CinematicDescent />
 
       {/* INTERRUPT: Horizontal villa photo scroll */}
       <VillaScroll />
