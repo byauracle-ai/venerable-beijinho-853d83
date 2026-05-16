@@ -5,8 +5,7 @@ export const Route = createFileRoute('/')({
   component: HomePage,
 })
 
-const BASE = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/public'
-const img = (f: string) => `${BASE}/${encodeURIComponent(f)}`
+const img = (f: string) => `/${f}`
 
 // ─── Mouse parallax hook ──────────────────────────────────────────────────────
 function useMouseParallax(strength = 12) {
@@ -510,48 +509,17 @@ function FullBleed({ src, eyebrow, title, sub, align = 'left', pos = 'center', d
 // happens through total darkness — seamless, cinematic.
 
 const DESCENT_SCENES = [
-  {
-    src: IMGS.hero,
-    label: null,
-    caption: null,
-    pos: 'center 20%',
-    // Starts clear, darkens+blurs as exit approaches
-  },
-  {
-    src: IMGS.entrance,
-    label: 'Arrival',
-    caption: 'A private approach through two hectares of tropical canopy',
-    pos: 'center 40%',
-  },
-  {
-    src: IMGS.window,
-    label: 'The View',
-    caption: 'Light and landscape held in a single frame',
-    pos: 'center 50%',
-  },
-  {
-    src: IMGS.interior,
-    label: 'Interior',
-    caption: 'Every surface chosen. Every detail earned.',
-    pos: 'center 35%',
-  },
-  {
-    src: IMGS.pool2,
-    label: 'Infinity Edge',
-    caption: 'Where the pool dissolves into the Indian Ocean',
-    pos: 'center 45%',
-  },
-  {
-    src: IMGS.pool,
-    label: 'The Pool',
-    caption: 'Blue hour. Salt air. Total silence.',
-    pos: 'center 40%',
-  },
+  { src: IMGS.hero,     label: null,           caption: null,                                                  pos: 'center 20%' },
+  { src: IMGS.entrance, label: 'Arrival',      caption: 'A private approach through two hectares of tropical canopy', pos: 'center 40%' },
+  { src: IMGS.window,   label: 'The View',     caption: 'Light and landscape held in a single frame',          pos: 'center 50%' },
+  { src: IMGS.interior, label: 'Interior',     caption: 'Every surface chosen. Every detail earned.',          pos: 'center 35%' },
+  { src: IMGS.pool2,    label: 'Infinity Edge','caption': 'Where the pool dissolves into the Indian Ocean',    pos: 'center 45%' },
+  { src: IMGS.pool,     label: 'The Pool',     caption: 'Blue hour. Salt air. Total silence.',                 pos: 'center 40%' },
 ]
 
 function CinematicDescent() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [progress, setProgress] = useState(0) // 0→1 through the full sequence
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
     const onScroll = () => {
@@ -565,97 +533,126 @@ function CinematicDescent() {
   }, [])
 
   const n = DESCENT_SCENES.length
-  // Which scene is active and how far through it (0→1)
-  const sceneF      = progress * n
-  const sceneIdx    = Math.min(n - 1, Math.floor(sceneF))
-  const sceneP      = sceneF - sceneIdx // 0→1 within current scene
 
-  // Exit transition: last 30% of each scene → darkens + blurs
-  const exitStart   = 0.7
-  const exitP       = sceneP < exitStart ? 0 : (sceneP - exitStart) / (1 - exitStart)
-  const exitDark    = exitP               // 0→1 opacity of black overlay
-  const exitBlur    = exitP * 14         // 0→14px blur
+  // Scene 0 (staircase) gets 40% of total scroll — suspense
+  // Remaining 5 scenes share the other 60% equally
+  const WEIGHTS = [0.25, 0.15, 0.15, 0.15, 0.15, 0.15]
+  const CUMULATIVE = WEIGHTS.reduce((acc, w, i) => {
+    acc.push((acc[i] || 0) + w); return acc
+  }, [] as number[])
 
-  // Entry transition: first 30% of each scene → still dark+blurred, clears
-  const entryEnd    = 0.3
-  const entryP      = sceneP > entryEnd ? 0 : 1 - (sceneP / entryEnd)
-  const entryDark   = entryP
-  const entryBlur   = entryP * 14
+  // Find which scene we're in based on weighted progress
+  let sceneIdx = 0
+  let sceneP = 0
+  for (let i = 0; i < n; i++) {
+    const start = i === 0 ? 0 : CUMULATIVE[i - 1]
+    const end   = CUMULATIVE[i]
+    if (progress <= end || i === n - 1) {
+      sceneIdx = i
+      sceneP   = Math.min(1, Math.max(0, (progress - start) / (end - start)))
+      break
+    }
+  }
 
-  // Combined overlay for this scene
-  const dark        = Math.max(exitDark, entryDark)
-  const blur        = Math.max(exitBlur, entryBlur)
+  const scene     = DESCENT_SCENES[sceneIdx]
+  const nextScene = DESCENT_SCENES[sceneIdx + 1]
 
-  const scene       = DESCENT_SCENES[sceneIdx]
-  const nextScene   = DESCENT_SCENES[sceneIdx + 1]
+  // Exit: last 28% of scene → darkens + blurs toward black
+  const EXIT_START  = 0.72
+  const exitP       = sceneP < EXIT_START ? 0 : (sceneP - EXIT_START) / (1 - EXIT_START)
 
-  // Caption appears in middle of each scene (30%–70%)
-  const captionOpacity = sceneP > 0.25 && sceneP < 0.78
-    ? Math.min(1, (sceneP - 0.25) / 0.15)
-    : sceneP >= 0.78
-      ? 1 - (sceneP - 0.78) / 0.15
-      : 0
+  // Entry: first 28% of scene → emerges from black
+  const ENTRY_END   = 0.28
+  const entryP      = sceneP > ENTRY_END  ? 0 : 1 - (sceneP / ENTRY_END)
+
+  const dark        = Math.max(exitP, entryP)
+  const blur        = dark * 18
+
+  // Caption: appears 28%→72%, centred in scene
+  const captionVisible = sceneP > 0.28 && sceneP < 0.72
+  const captionOpacity = captionVisible
+    ? Math.min(1, (sceneP - 0.28) / 0.12, (0.72 - sceneP) / 0.12)
+    : 0
+
+  // Hero title: only on scene 0, fades out in first 20% of scene progress
+  const heroTextOpacity = sceneIdx === 0 ? Math.max(0, 1 - sceneP * 5) : 0
+  // Staircase darkens top→bottom as progress builds — feel of descending
+  const staircaseBottomDark = sceneIdx === 0 ? Math.min(0.85, sceneP * 1.4) : 0
 
   return (
-    <div
-      ref={containerRef}
-      id="estate"
-      style={{ height: `${n * 220}vh`, position: 'relative' }}
-    >
+    <div ref={containerRef} id="estate" style={{ height: `${n * 120}vh`, position: 'relative' }}>
       <div style={{ position: 'sticky', top: 0, height: '100dvh', overflow: 'hidden', background: '#000' }}>
 
-        {/* Current scene image */}
+        {/* Current scene */}
         <img
           key={`scene-${sceneIdx}`}
           src={scene.src}
           alt={scene.label ?? 'Villa Azur'}
           onError={(e) => { (e.target as HTMLImageElement).src = IMGS.mcclean }}
           style={{
-            position: 'absolute', inset: 0,
-            width: '100%', height: '100%',
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'cover', objectPosition: scene.pos,
             filter: `blur(${blur}px)`,
-            transform: `scale(${1 + blur * 0.004})`, // scale up slightly to hide blur edges
-            transition: 'filter 0.05s linear, transform 0.05s linear',
+            transform: `scale(${1 + blur * 0.005})`,
             willChange: 'filter, transform',
           }}
         />
 
-        {/* Next scene pre-loads invisibly */}
-        {nextScene && (
-          <img
-            key={`next-${sceneIdx}`}
-            src={nextScene.src}
-            alt="preload"
-            style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
-          />
+        {/* Staircase-specific: gradient grows from bottom as you descend */}
+        {sceneIdx === 0 && (
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: `linear-gradient(to top, rgba(3,3,6,${staircaseBottomDark}) 0%, transparent 60%)`,
+          }} />
         )}
 
-        {/* Dark overlay — driven by scroll */}
+        {/* Preload next scene */}
+        {nextScene && (
+          <img key={`pre-${sceneIdx}`} src={nextScene.src} alt=""
+            style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} />
+        )}
+
+        {/* Dark transition overlay — full bleed, scroll-driven */}
         <div style={{
-          position: 'absolute', inset: 0,
+          position: 'absolute', inset: 0, pointerEvents: 'none',
           background: `rgba(3,3,6,${dark})`,
-          transition: 'background 0.04s linear',
-          pointerEvents: 'none',
         }} />
 
-        {/* Permanent bottom gradient */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(5,5,7,0.8) 0%, transparent 45%)', pointerEvents: 'none' }} />
+        {/* Permanent bottom vignette */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(to top, rgba(5,5,7,0.75) 0%, transparent 40%)' }} />
 
-        {/* Scene counter — top left */}
-        <div className="track" style={{ position: 'absolute', top: 28, left: 'clamp(28px,4vw,56px)', fontSize: 8, color: 'rgba(196,160,90,0.35)', opacity: sceneIdx > 0 ? 1 : 0, transition: 'opacity 0.8s' }}>
-          {String(sceneIdx).padStart(2,'0')} / {String(n - 1).padStart(2,'0')}
+        {/* HERO TEXT — scene 0 only, fades as staircase begins */}
+        <div style={{
+          position: 'absolute',
+          bottom: 'clamp(80px,9vw,130px)',
+          left: 'clamp(40px,6vw,96px)',
+          opacity: heroTextOpacity,
+          pointerEvents: 'none',
+          maxWidth: 700,
+        }}>
+          <div className="track" style={{ marginBottom: 20, fontSize: 8 }}>Grand Baie · North Coast · Mauritius</div>
+          <h1 style={{ fontFamily: 'var(--H)', fontSize: 'clamp(18px,2.4vw,34px)', fontWeight: 400, lineHeight: 1.5, color: 'var(--stone)', margin: '0 0 20px', letterSpacing: '0.28em', textTransform: 'uppercase' }}>
+            Descend into luxury
+          </h1>
+          <div style={{ width: 48, height: 1, background: 'var(--gold)', marginBottom: 24, opacity: 0.5 }} />
+          <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(14px,1.5vw,17px)', fontStyle: 'italic', color: 'rgba(240,236,228,0.55)', maxWidth: 400, lineHeight: 1.8, marginBottom: 36 }}>
+            Boutique villas of singular distinction. Permanent residency. From £1,250,000.
+          </p>
+          <div style={{ display: 'flex', gap: 14 }}>
+            <a href="#villas" className="btn btn-gold" style={{ pointerEvents: 'all' }}>Explore Villas</a>
+            <a href="#contact" className="btn btn-outline" style={{ pointerEvents: 'all' }}>Private Viewing</a>
+          </div>
         </div>
 
-        {/* Caption — fades in mid-scene, out near end */}
+        {/* SCENE CAPTION — scenes 1–5 */}
         {scene.label && (
           <div style={{
             position: 'absolute',
             bottom: 'clamp(56px,7vh,96px)',
             left: 'clamp(40px,6vw,96px)',
             opacity: captionOpacity,
-            transform: `translateY(${(1 - Math.min(1, captionOpacity * 2)) * 12}px)`,
-            transition: 'opacity 0.12s, transform 0.12s',
+            transform: `translateY(${(1 - Math.min(1, captionOpacity * 3)) * 10}px)`,
+            pointerEvents: 'none',
             maxWidth: 560,
           }}>
             <div className="track" style={{ marginBottom: 14, fontSize: 9 }}>{scene.label}</div>
@@ -665,32 +662,40 @@ function CinematicDescent() {
           </div>
         )}
 
-        {/* Hero-specific text — only on scene 0 */}
-        {sceneIdx === 0 && (
-          <div style={{
-            position: 'absolute',
-            bottom: 'clamp(56px,7vh,96px)',
-            left: 'clamp(40px,6vw,96px)',
-            opacity: Math.max(0, 1 - sceneP * 3.5),
-            transition: 'opacity 0.1s',
-          }}>
-            <div className="track" style={{ marginBottom: 10, fontSize: 8 }}>Villa Azur · Grand Baie · Mauritius</div>
-            <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(13px,1.4vw,16px)', fontStyle: 'italic', color: 'rgba(240,236,228,0.55)', maxWidth: 360, lineHeight: 1.75 }}>
-              From £1,250,000 · Permanent residency included
-            </p>
-          </div>
-        )}
-
-        {/* Progress line — bottom */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'rgba(196,160,90,0.08)' }}>
-          <div style={{ height: '100%', background: 'var(--gold)', width: `${progress * 100}%`, transition: 'width 0.05s linear' }} />
+        {/* Scene counter */}
+        <div className="track" style={{ position: 'absolute', top: 28, left: 'clamp(28px,4vw,56px)', fontSize: 8, color: 'rgba(196,160,90,0.3)', opacity: sceneIdx > 0 ? captionOpacity : 0 }}>
+          {String(sceneIdx).padStart(2,'0')} / {String(n - 1).padStart(2,'0')}
         </div>
 
-        {/* Scene dots */}
-        <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
+        {/* Yield badge — visible on scene 0 only */}
+        <div style={{
+          position: 'absolute', top: 96, right: 'clamp(24px,5vw,72px)',
+          borderTop: '1px solid rgba(196,160,90,0.28)', borderBottom: '1px solid rgba(196,160,90,0.28)',
+          padding: '18px 28px', textAlign: 'center',
+          background: 'rgba(5,5,7,0.5)', backdropFilter: 'blur(14px)',
+          opacity: heroTextOpacity, pointerEvents: 'none',
+        }}>
+          <div className="track" style={{ fontSize: 7, marginBottom: 8 }}>Est. Gross Yield</div>
+          <div style={{ fontFamily: 'var(--F)', fontSize: 38, fontWeight: 300, lineHeight: 1, color: 'var(--gold)' }}>9%</div>
+          <div style={{ fontFamily: 'var(--F)', fontSize: 11, fontStyle: 'italic', color: 'var(--ash)', marginTop: 4 }}>short-term rental</div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'rgba(196,160,90,0.08)' }}>
+          <div style={{ height: '100%', background: 'var(--gold)', width: `${progress * 100}%` }} />
+        </div>
+
+        {/* Dots */}
+        <div style={{ position: 'absolute', bottom: 18, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
           {DESCENT_SCENES.map((_, i) => (
-            <div key={i} style={{ width: i === sceneIdx ? 20 : 4, height: 1, background: i === sceneIdx ? 'var(--gold)' : 'rgba(196,160,90,0.2)', transition: 'all 0.4s ease' }} />
+            <div key={i} style={{ width: i === sceneIdx ? 20 : 4, height: 1, background: i === sceneIdx ? 'var(--gold)' : 'rgba(196,160,90,0.18)', transition: 'all 0.5s ease' }} />
           ))}
+        </div>
+
+        {/* Scroll cue — only on scene 0 */}
+        <div style={{ position: 'absolute', bottom: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, opacity: heroTextOpacity * 0.6, pointerEvents: 'none' }}>
+          <div className="track" style={{ fontSize: 7, color: 'rgba(196,160,90,0.5)' }}>Scroll</div>
+          <div style={{ width: 1, height: 44, background: 'linear-gradient(to bottom, var(--gold), transparent)', animation: 'pulse 2s ease infinite' }} />
         </div>
       </div>
     </div>
@@ -1063,25 +1068,26 @@ function IslandSection() {
 // ─── Staircase descent ────────────────────────────────────────────────────────
 function StaircaseDescent() {
   const { ref, p } = useScrollProgress()
-  const dark = p < 0.55 ? 0 : Math.min(1, (p - 0.55) / 0.38)
-  const txt  = p < 0.70 ? 0 : Math.min(1, (p - 0.70) * 8)
-  // Subtle rotation — tilts into the dark as you descend
+  const dark   = p < 0.52 ? 0 : Math.min(1, (p - 0.52) / 0.40)
+  const txt    = p < 0.68 ? 0 : Math.min(1, (p - 0.68) * 8)
   const rotate = p * 2.5
+  const blurPx = dark * 12
   return (
     <div ref={ref} style={{ minHeight: '150dvh', position: 'relative', overflow: 'hidden' }}>
       <img
-        src={IMGS.hero}
-        alt="Descend"
-        onError={(e) => { (e.target as HTMLImageElement).src = IMGS.pool2 }}
+        src={IMGS.interior}
+        alt="Descend into sanctuary"
+        onError={(e) => { (e.target as HTMLImageElement).src = IMGS.pool }}
         style={{
-          width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top',
+          width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%',
           position:'absolute', inset:0,
-          transform:`scale(${1 + p * 0.05}) rotate(${rotate}deg)`,
+          transform:`scale(${1 + p * 0.06 + blurPx * 0.005}) rotate(${rotate}deg)`,
           transformOrigin:'center center',
+          filter: `blur(${blurPx}px)`,
         }}
       />
       <div style={{ position:'absolute', inset:0, background:`rgba(3,3,8,${dark})` }} />
-      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:40, opacity:txt, transition:'opacity 0.2s' }}>
+      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:40, opacity:txt }}>
         <div className="track" style={{ marginBottom:22, letterSpacing:'0.45em' }}>Descend · Restore · Transcend</div>
         <h2 style={{ fontFamily:'var(--F)', fontSize:'clamp(30px,5vw,68px)', fontWeight:300, fontStyle:'italic', color:'var(--stone)', lineHeight:1.1 }}>
           The Wellness<br />
@@ -1247,12 +1253,10 @@ function HomePage() {
       <GlobalStyles />
       <LoadCurtain />
       <CustomCursor />
-      <DragScroll />
       <ProgressBar />
       <NavBar />
-      <Hero />
 
-      {/* Cinematic descent — staircase → entrance → window → interior → pool2 → pool */}
+      {/* Cinematic descent — staircase (hero) → entrance → window → interior → pool2 → pool */}
       <CinematicDescent />
 
       {/* INTERRUPT: Horizontal villa photo scroll */}
