@@ -9,7 +9,7 @@ const BASE = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-
 const img = (f: string) => `${BASE}/${encodeURIComponent(f)}`
 
 const IMGS = {
-  hero:    img('Screenshot 2026-05-11 171922.png'),   // staircase — new hero
+  hero:    img('iron-wood-house-earth-lines-architects_18'),
   ext1:    img('Screenshot 2026-03-21 175630.png'),
   living:  img('Screenshot 2026-05-14 201935.png'),
   horizon: img('Screenshot 2026-05-14 201944.png'),
