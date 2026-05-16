@@ -6,32 +6,30 @@ export const Route = createFileRoute('/')({
 })
 
 // ─── Images from /public folder ───────────────────────────────────────────────
-const PUB = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/public'
+const PUB = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main'
 const p = (f: string) => `${PUB}/${encodeURIComponent(f)}`
 
 const IMG = {
-  // Descent sequence — staircase is the hero, visible immediately
-  hero:     p('iron-wood-house-earth-lines-architects_18.jpg'),
-  entrance: p('entrance.jpg'),
-  window:   p('window.png'),
-  seaView:  p('Sea View.png'),
-  seaView2: p('Sea view 2.png'),
-  pool:     p('infinity pool.jpg'),
-  pool2:    p('infinity pool 2.jpg'),
+  // Descent sequence
+  hero:       p('Screenshot 2026-05-14 202001.png'), // pool shot as stair fallback
+  entrance:   p('Sea VIew.png'),                     // exact filename from screenshot
+  window:     p('window.png'),
+  seaView2:   p('Sea view 2.png'),
+  pool:       p('Sea VIew.png'),
+  pool2:      p('Sea view 2.png'),
   // Estate panels
-  interior: p('interior.jpg'),
-  living:   p('Screenshot 2026-05-14 201935.png'),
-  dining:   p('Screenshot 2026-05-14 202012.png'),
-  master:   p('Screenshot 2026-05-14 202036.png'),
+  interior:   p('Sea VIew.png'),
+  living:     p('Screenshot 2026-05-14 202001.png'),
   // Spa
-  spaEntry: p('Spa Entry.png'),
-  spa1:     p('Spa 1.png'),
-  spa2:     p('Spa 2.png'),
-  spa3:     p('Spa 3.jpg'),
+  spaEntry:   p('Spa Entry.png'),
+  spa1:       p('Spa 1.png'),
+  spa2:       p('Spa 2.png'),
+  spa3:       p('Spa 3.jpg'),
   // Island
-  island:   p('grok-image-86070f82-2171-4501-8fe6-d6f72d7d1dcb.png'),
-  // Pool render
-  poolRender: p('205032606_4198387713573399_8106792087768550505_n.jpg'),
+  island:     p('Sea view 2.png'),
+  // Pool render / villa tabs
+  poolRender: p('Sea VIew.png'),
+  seaView:    p('Sea VIew.png'),
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -525,10 +523,10 @@ const VILLAS = [
   { name:'Maison Lagon',    loc:'Trou aux Biches',  price:'£1,250,000', tag:'Entry',      beds:3,baths:4,sqm:380,yld:'6.8%',img:IMG.seaView,   desc:'Steps from the most celebrated lagoon in Mauritius. Fully furnished, generating income from day one.' },
   { name:'Villa Corail',    loc:'Grand Baie',        price:'£1,650,000', tag:'Signature',  beds:3,baths:4,sqm:440,yld:'7.2%',img:IMG.seaView2,  desc:'Panoramic lagoon views from every room. Architecture that dissolves into the landscape.' },
   { name:'Domaine Azur',    loc:'Péreybère',         price:'£1,950,000', tag:'Premium',    beds:4,baths:5,sqm:560,yld:'7.6%',img:IMG.window,    desc:'Elevated position with 180° northern lagoon views. Architect-designed, immaculately finished.' },
-  { name:'Domaine Noir',    loc:'Bel Ombre',         price:'£2,100,000', tag:"Collector's",beds:4,baths:5,sqm:640,yld:'7.5%',img:IMG.interior,  desc:'Monolithic basalt and 22-metre lap pool on 1.4 hectares of private nature reserve.' },
-  { name:'Villa Lumière',   loc:'Tamarin',           price:'£2,750,000', tag:'Grand',      beds:5,baths:6,sqm:720,yld:'8.2%',img:IMG.pool,      desc:'Moorish geometry meets Creole colour. Rooftop terrace with 360° mountain-to-ocean views.' },
-  { name:'Résidence Soleil',loc:'Black River',       price:'£3,200,000', tag:'Estate',     beds:5,baths:6,sqm:800,yld:'8.8%',img:IMG.pool2,     desc:'Six suites surrounding a double infinity pool with fire features. Paris-designed interiors.' },
-  { name:'Villa Azur',      loc:'Grand Baie',        price:'£3,750,000', tag:'Flagship',   beds:5,baths:6,sqm:820,yld:'9.0%',img:IMG.poolRender,desc:'The definitive Mauritian estate. Infinity pool, private beach, wine cellar, dedicated concierge.' },
+  { name:'Domaine Noir',    loc:'Bel Ombre',         price:'£2,100,000', tag:"Collector's",beds:4,baths:5,sqm:640,yld:'7.5%',img:IMG.spa1,      desc:'Monolithic basalt and 22-metre lap pool on 1.4 hectares of private nature reserve.' },
+  { name:'Villa Lumière',   loc:'Tamarin',           price:'£2,750,000', tag:'Grand',      beds:5,baths:6,sqm:720,yld:'8.2%',img:IMG.spa2,      desc:'Moorish geometry meets Creole colour. Rooftop terrace with 360° mountain-to-ocean views.' },
+  { name:'Résidence Soleil',loc:'Black River',       price:'£3,200,000', tag:'Estate',     beds:5,baths:6,sqm:800,yld:'8.8%',img:IMG.spaEntry,  desc:'Six suites surrounding a double infinity pool with fire features. Paris-designed interiors.' },
+  { name:'Villa Azur',      loc:'Grand Baie',        price:'£3,750,000', tag:'Flagship',   beds:5,baths:6,sqm:820,yld:'9.0%',img:IMG.spa3,      desc:'The definitive Mauritian estate. Infinity pool, private beach, wine cellar, dedicated concierge.' },
 ]
 
 function Villas() {
