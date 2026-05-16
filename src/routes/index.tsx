@@ -9,7 +9,7 @@ const BASE = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-
 const img = (f: string) => `${BASE}/${encodeURIComponent(f)}`
 
 const IMGS = {
-  hero:    img('iron-wood-house-earth-lines-architects_18'),
+  hero:    img('iron-wood-house-earth-lines-architects_18.jpg'),
   ext1:    img('Screenshot 2026-03-21 175630.png'),
   living:  img('Screenshot 2026-05-14 201935.png'),
   horizon: img('Screenshot 2026-05-14 201944.png'),
@@ -26,7 +26,7 @@ const IMGS = {
 
 // Villa gallery — the horizontal scroll sequence
 const VILLA_SLIDES = [
-  { src: IMGS.pool2,   label: 'Arrival',        caption: 'A private approach through two hectares of tropical canopy' },
+  { src: IMGS.ext1,    label: 'Arrival',        caption: 'A private approach through two hectares of tropical canopy' },
   { src: IMGS.pool2,   label: 'The Pool',       caption: 'Infinity edge dissolving into the Indian Ocean at blue hour' },
   { src: IMGS.living,  label: 'Living',         caption: 'Floor-to-ceiling glass — interior and ocean as one' },
   { src: IMGS.horizon, label: 'The Horizon',    caption: 'Unobstructed panorama across the northern lagoon' },
@@ -83,7 +83,7 @@ function useCountUp(target: number, active: boolean, duration = 2200, decimals =
 function GlobalStyles() {
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Jost:wght@200;300;400&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Jost:wght@200;300;400&display=swap');
 
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -101,6 +101,7 @@ function GlobalStyles() {
         --border:  rgba(196,160,90,0.12);
         --borderl: rgba(196,160,90,0.06);
         --F: 'Cormorant Garamond', Georgia, serif;
+        --H: 'Cinzel', serif;
         --G: 'Jost', sans-serif;
       }
 
@@ -219,7 +220,7 @@ function Hero() {
         <div className="track" style={{ marginBottom: 28, opacity: 0, animation: 'fadeUp 1s ease 0.6s forwards' }}>
           Grand Baie · North Coast · Mauritius
         </div>
-        <h1 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(28px,3.8vw,56px)', fontWeight: 300, fontStyle: 'italic', lineHeight: 1.25, color: 'var(--stone)', margin: '0 0 28px', opacity: 0, animation: 'fadeUp 1.4s ease 0.9s forwards', letterSpacing: '0.03em' }}>
+        <h1 style={{ fontFamily: 'var(--H)', fontSize: 'clamp(18px,2.4vw,34px)', fontWeight: 400, fontStyle: 'normal', lineHeight: 1.5, color: 'var(--stone)', margin: '0 0 28px', opacity: 0, animation: 'fadeUp 1.4s ease 0.9s forwards', letterSpacing: '0.28em', textTransform: 'uppercase' }}>
           Descend into luxury
         </h1>
         <div style={{ width: 0, height: 1, background: 'var(--gold)', marginBottom: 32, opacity: 0.5, animation: 'lineW 1.6s ease 1.7s forwards' }} />
@@ -442,6 +443,26 @@ function VillaScroll() {
               {VILLA_SLIDES[activeIdx]?.label}
             </div>
           </div>
+
+          {/* Next arrow — bottom right */}
+          <div style={{ position: 'absolute', bottom: 'clamp(32px,5vh,60px)', right: 'clamp(32px,4vw,60px)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, zIndex: 10 }}>
+            {/* → next slide hint */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: activeIdx < VILLA_SLIDES.length - 1 ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+              <span className="track" style={{ fontSize: 7, color: 'rgba(196,160,90,0.5)', letterSpacing: '0.3em' }}>Next</span>
+              <svg width="32" height="12" viewBox="0 0 32 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.5 }}>
+                <line x1="0" y1="6" x2="26" y2="6" stroke="#c4a05a" strokeWidth="0.75"/>
+                <polyline points="22,2 28,6 22,10" fill="none" stroke="#c4a05a" strokeWidth="0.75"/>
+              </svg>
+            </div>
+            {/* ↓ escape hint — always visible */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: 0.35 }}>
+              <span className="track" style={{ fontSize: 7, color: 'var(--gold)', letterSpacing: '0.3em' }}>Continue</span>
+              <svg width="12" height="28" viewBox="0 0 12 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="6" y1="0" x2="6" y2="22" stroke="#c4a05a" strokeWidth="0.75"/>
+                <polyline points="2,18 6,24 10,18" fill="none" stroke="#c4a05a" strokeWidth="0.75"/>
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -450,7 +471,7 @@ function VillaScroll() {
 
 // ─── INTERRUPT 3: Villa tiers ─────────────────────────────────────────────────
 const TIERS = [
-  { name:'Maison Lagon',  loc:'Trou aux Biches, West Coast', price:'£1,250,000', tag:'Entry Value', beds:3, baths:4, sqm:380, yield:'6.8%', desc:'A refined coastal retreat steps from Mauritius\'s most celebrated lagoon. Fully furnished, income-generating from day one. The ideal entry into Mauritian ownership.', img: IMGS.pool },
+  { name:'Maison Lagon',  loc:'Trou aux Biches, West Coast', price:'£1,250,000', tag:'Entry Value', beds:3, baths:4, sqm:380, yield:'6.8%', desc:'A refined coastal retreat steps from Mauritius\'s most celebrated lagoon. Fully furnished, income-generating from day one. The ideal entry into Mauritian ownership.', img: IMGS.living },
   { name:'Domaine Noir',  loc:'Bel Ombre, South Coast',      price:'£2,100,000', tag:'Collector\'s', beds:4, baths:5, sqm:640, yield:'7.5%', desc:'Monolithic basalt, a 22-metre lap pool, and 1.4 hectares of private nature reserve on one of the island\'s last untouched coastlines. Architecture as a singular statement.', img: IMGS.pool },
   { name:'Villa Azur',    loc:'Grand Baie, North Coast',      price:'£3,750,000', tag:'Flagship',    beds:5, baths:6, sqm:820, yield:'9%',   desc:'Five en-suite suites, infinity pool, private beach pathway, wine cellar, spa suite, dedicated concierge. The definitive Mauritian estate on the island\'s most coveted coast.', img: IMGS.pool2 },
 ]
@@ -512,12 +533,12 @@ function VillaTiers() {
 
 // ─── INTERRUPT 4: Horizontal materials scroll ─────────────────────────────────
 const MATERIALS = [
-  { n:'Reclaimed Teak',     s:'Floors · Ceilings · Louvres',     d:'Sourced from 200-year-old Indonesian river barges. Each plank carries its own century — grain patterns and silver-grey patina no fabrication can replicate.' },
-  { n:'Volcanic Basalt',    s:'Walls · Pool surround · Columns',  d:'Quarried from the Mauritian interior. Cut to 600mm slabs, honed to a satin finish that is cool to the touch at every hour of the day.' },
-  { n:'Calacatta Oro',      s:'Kitchen · Bathrooms · Vanities',   d:'Single-slab marble selected in person at the Carrara quarry. Gold veining matched across every surface. No two pieces are the same.' },
-  { n:'Belgian Linen',      s:'Bedding · Drapes · Day beds',      d:'400-thread stonewashed linen, laundered in rainwater collected on site. Weighted to 280gsm — the precise threshold between luxurious and effortless.' },
-  { n:'Hand-Laid Terrazzo', s:'Terrace · Bathrooms · Hall',       d:'Rose quartz, serpentine and white marble. Mixed on site by local Mauritian craftsmen. Each floor a singular composition.' },
-  { n:'Unlacquered Brass',  s:'Hardware · Fixtures · Lighting',   d:'From a single foundry in Burgundy. Left to develop its own patina through the first year of residence. Every handle, tap and fitting from one source.' },
+  { n:'Reclaimed Teak',     s:'Floors · Ceilings · Louvres',     d:'Sourced from 200-year-old Indonesian river barges. Each plank carries its own century — grain patterns and silver-grey patina no fabrication can replicate.',     tex:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=85&auto=format' },
+  { n:'Volcanic Basalt',    s:'Walls · Pool surround · Columns',  d:'Quarried from the Mauritian interior. Cut to 600mm slabs, honed to a satin finish that is cool to the touch at every hour of the day.',                        tex:'https://images.unsplash.com/photo-1609155702853-ee1e5abcbe19?w=900&q=85&auto=format' },
+  { n:'Calacatta Oro',      s:'Kitchen · Bathrooms · Vanities',   d:'Single-slab marble selected in person at the Carrara quarry. Gold veining matched across every surface. No two pieces are the same.',                          tex:'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=900&q=85&auto=format' },
+  { n:'Belgian Linen',      s:'Bedding · Drapes · Day beds',      d:'400-thread stonewashed linen, laundered in rainwater collected on site. Weighted to 280gsm — the precise threshold between luxurious and effortless.',           tex:'https://images.unsplash.com/photo-1567225557594-88887e4d1af3?w=900&q=85&auto=format' },
+  { n:'Hand-Laid Terrazzo', s:'Terrace · Bathrooms · Hall',       d:'Rose quartz, serpentine and white marble. Mixed on site by local Mauritian craftsmen. Each floor a singular composition.',                                      tex:'https://images.unsplash.com/photo-1615971677499-5467cbab01c0?w=900&q=85&auto=format' },
+  { n:'Unlacquered Brass',  s:'Hardware · Fixtures · Lighting',   d:'From a single foundry in Burgundy. Left to develop its own patina through the first year of residence. Every handle, tap and fitting from one source.',         tex:'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=85&auto=format' },
 ]
 
 function MaterialsScroll() {
@@ -582,18 +603,53 @@ function MaterialsScroll() {
       <div ref={containerRef} style={{ height: `${MATERIALS.length * 100}vh`, position: 'relative' }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
           <div ref={trackRef} style={{ display: 'flex', height: '100%', willChange: 'transform', transition: 'transform 0.06s linear' }}>
-            {MATERIALS.map(({ n, s, d }, i) => (
-              <div key={n} style={{ minWidth: '100vw', height: '100%', display: 'flex', alignItems: 'center', padding: 'clamp(40px,6vw,96px)', borderRight: '1px solid var(--borderl)', position: 'relative', background: i % 2 === 0 ? 'var(--ink)' : 'var(--surface)' }}>
-                {/* Ghost number */}
-                <div style={{ position: 'absolute', right: '3%', bottom: '-0.06em', fontFamily: 'var(--F)', fontSize: 'clamp(160px,20vw,280px)', fontWeight: 300, fontStyle: 'italic', color: 'rgba(196,160,90,0.03)', lineHeight: 1, userSelect: 'none', pointerEvents: 'none' }}>
-                  {String(i+1).padStart(2,'0')}
-                </div>
-                <div style={{ maxWidth: 580, position: 'relative', zIndex: 1 }}>
+            {MATERIALS.map(({ n, s, d, tex }, i) => (
+              <div key={n} style={{ minWidth: '100vw', height: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', borderRight: '1px solid var(--borderl)', position: 'relative', background: i % 2 === 0 ? 'var(--ink)' : 'var(--surface)' }}>
+
+                {/* Left — text */}
+                <div style={{ padding: 'clamp(40px,6vw,96px)', position: 'relative', zIndex: 1 }}>
                   <div className="track" style={{ marginBottom: 18, fontSize: 8, color: 'rgba(196,160,90,0.45)' }}>{String(i+1).padStart(2,'0')} / {String(MATERIALS.length).padStart(2,'0')}</div>
                   <div style={{ width: 40, height: 1, background: 'var(--gold)', marginBottom: 32, opacity: 0.5 }} />
                   <h3 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(30px,4vw,64px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--stone)', marginBottom: 22, lineHeight: 1.08 }}>{n}</h3>
                   <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(15px,1.6vw,19px)', fontStyle: 'italic', color: 'rgba(240,236,228,0.5)', lineHeight: 1.85, marginBottom: 28 }}>{d}</p>
                   <div className="track" style={{ fontSize: 8, color: 'rgba(196,160,90,0.25)' }}>{s}</div>
+                </div>
+
+                {/* Right — texture image in diamond clip */}
+                <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(40px,5vw,80px)' }}>
+                  {/* Large ghost number behind */}
+                  <div style={{ position: 'absolute', right: '-0.04em', bottom: '-0.06em', fontFamily: 'var(--F)', fontSize: 'clamp(160px,20vw,280px)', fontWeight: 300, fontStyle: 'italic', color: 'rgba(196,160,90,0.03)', lineHeight: 1, userSelect: 'none', pointerEvents: 'none' }}>
+                    {String(i+1).padStart(2,'0')}
+                  </div>
+                  {/* Diamond shape — rotated square */}
+                  <div style={{
+                    width: 'clamp(220px,28vw,420px)',
+                    height: 'clamp(220px,28vw,420px)',
+                    transform: 'rotate(45deg)',
+                    overflow: 'hidden',
+                    boxShadow: '0 24px 80px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(196,160,90,0.12)',
+                    flexShrink: 0,
+                    position: 'relative',
+                    zIndex: 1,
+                  }}>
+                    <img
+                      src={tex}
+                      alt={n}
+                      loading="lazy"
+                      style={{
+                        width: '142%',
+                        height: '142%',
+                        objectFit: 'cover',
+                        objectPosition: 'center',
+                        transform: 'rotate(-45deg) translate(-15%, -15%)',
+                        filter: 'brightness(0.75) saturate(0.9)',
+                      }}
+                    />
+                    {/* Subtle gold tint overlay */}
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(196,160,90,0.06)', mixBlendMode: 'overlay' }} />
+                  </div>
+                  {/* Material name etched below diamond */}
+                  <div className="track" style={{ position: 'absolute', bottom: 'clamp(32px,4vw,56px)', left: '50%', transform: 'translateX(-50%)', fontSize: 7, color: 'rgba(196,160,90,0.3)', whiteSpace: 'nowrap', letterSpacing: '0.35em' }}>{n.toUpperCase()}</div>
                 </div>
               </div>
             ))}
