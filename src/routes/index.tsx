@@ -15,8 +15,8 @@ const IMG = {
   entrance:   p('Entrance.png'),                     // exact filename from screenshot
   window:     p('window.png'),
   Interior:   p('Interior.png'),
-  Infinity Pool: p('Infinity Pool.png'),
-  Infinity Pool 2: p('Infinity Pool 2.png'),
+  Pool: p('Infinity Pool.png'),
+  Pool: p('Infinity Pool 2.png'),
   Master:     p('Master.png'),
   Sea View:   p('Sea View.png'),
   Sea View 2: p('Sea View 2.png'),
