@@ -12,11 +12,18 @@ const p = (f: string) => `${PUB}/${encodeURIComponent(f)}`
 const IMG = {
   // Descent sequence
   hero:       p('descent.jpg'), 
-  entrance:   p('Sea VIew.png'),                     // exact filename from screenshot
+  entrance:   p('Entrance.png'),                     // exact filename from screenshot
   window:     p('window.png'),
-  seaView2:   p('Sea view 2.png'),
-  pool:       p('Sea VIew.png'),
-  pool2:      p('Sea view 2.png'),
+  Interior:   p('Interior.png'),
+  Infinity Pool: p('Infinity Pool.png'),
+  Infinity Pool 2: p('Infinity Pool 2.png'),
+  Master:     p('Master.png'),
+  Sea View:   p('Sea View.png'),
+  Sea View 2: p('Sea View 2.png'),
+  Penthouse:  p('Penthouse-Interior-scaled.jpg'),
+  Living Area: p('Living Area.png'),
+  Outdoor:    p('Outdoor.png'),
+  
   // Estate panels
   interior:   p('Sea VIew.png'),
   living:     p('Screenshot 2026-05-14 202001.png'),
