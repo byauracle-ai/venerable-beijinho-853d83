@@ -23,7 +23,6 @@ const IMG = {
   Penthouse:  p('Penthouse-Interior-scaled.jpg'),
   Living Area: p('Living Area.png'),
   Outdoor:    p('Outdoor.png'),
-  
   // Estate panels
   interior:   p('Sea VIew.png'),
   living:     p('Screenshot 2026-05-14 202001.png'),
