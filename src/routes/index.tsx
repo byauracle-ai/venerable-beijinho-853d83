@@ -306,6 +306,8 @@ function WowCapture() {
 }
 
 
+// ─── INTERRUPT 1: Quote moment ────────────────────────────────────────────────
+function QuoteMoment({ quote, attr }: { quote:string; attr?:string }) {
   const { ref, inView } = useInView(0.3)
   return (
     <section ref={ref} style={{ background: 'var(--surface)', padding: 'clamp(100px,14vw,180px) clamp(40px,12vw,200px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '55vh', textAlign: 'center', borderTop: '1px solid var(--borderl)', borderBottom: '1px solid var(--borderl)' }}>
