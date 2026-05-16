@@ -5,8 +5,7 @@ export const Route = createFileRoute('/')({
   component: HomePage,
 })
 
-const BASE = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/public'
-const img = (f: string) => `${BASE}/${encodeURIComponent(f)}`
+const img = (f: string) => `/${f}`
 
 // ─── Mouse parallax hook ──────────────────────────────────────────────────────
 function useMouseParallax(strength = 12) {
@@ -537,7 +536,7 @@ function CinematicDescent() {
 
   // Scene 0 (staircase) gets 40% of total scroll — suspense
   // Remaining 5 scenes share the other 60% equally
-  const WEIGHTS = [0.40, 0.12, 0.12, 0.12, 0.12, 0.12]
+  const WEIGHTS = [0.25, 0.15, 0.15, 0.15, 0.15, 0.15]
   const CUMULATIVE = WEIGHTS.reduce((acc, w, i) => {
     acc.push((acc[i] || 0) + w); return acc
   }, [] as number[])
@@ -581,7 +580,7 @@ function CinematicDescent() {
   const staircaseBottomDark = sceneIdx === 0 ? Math.min(0.85, sceneP * 1.4) : 0
 
   return (
-    <div ref={containerRef} id="estate" style={{ height: `${n * 220}vh`, position: 'relative' }}>
+    <div ref={containerRef} id="estate" style={{ height: `${n * 120}vh`, position: 'relative' }}>
       <div style={{ position: 'sticky', top: 0, height: '100dvh', overflow: 'hidden', background: '#000' }}>
 
         {/* Current scene */}
@@ -1254,7 +1253,6 @@ function HomePage() {
       <GlobalStyles />
       <LoadCurtain />
       <CustomCursor />
-      <DragScroll />
       <ProgressBar />
       <NavBar />
 
