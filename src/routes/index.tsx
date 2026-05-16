@@ -26,7 +26,7 @@ const IMGS = {
 
 // Villa gallery — the horizontal scroll sequence
 const VILLA_SLIDES = [
-  { src: IMGS.ext1,    label: 'Arrival',        caption: 'A private approach through two hectares of tropical canopy' },
+  { src: IMGS.pool2,   label: 'Arrival',        caption: 'A private approach through two hectares of tropical canopy' },
   { src: IMGS.pool2,   label: 'The Pool',       caption: 'Infinity edge dissolving into the Indian Ocean at blue hour' },
   { src: IMGS.living,  label: 'Living',         caption: 'Floor-to-ceiling glass — interior and ocean as one' },
   { src: IMGS.horizon, label: 'The Horizon',    caption: 'Unobstructed panorama across the northern lagoon' },
@@ -219,8 +219,8 @@ function Hero() {
         <div className="track" style={{ marginBottom: 28, opacity: 0, animation: 'fadeUp 1s ease 0.6s forwards' }}>
           Grand Baie · North Coast · Mauritius
         </div>
-        <h1 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(54px,8.5vw,124px)', fontWeight: 300, fontStyle: 'italic', lineHeight: 0.94, color: 'var(--stone)', margin: '0 0 28px', opacity: 0, animation: 'fadeUp 1.4s ease 0.9s forwards' }}>
-          Descend<br />into<br />paradise
+        <h1 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(28px,3.8vw,56px)', fontWeight: 300, fontStyle: 'italic', lineHeight: 1.25, color: 'var(--stone)', margin: '0 0 28px', opacity: 0, animation: 'fadeUp 1.4s ease 0.9s forwards', letterSpacing: '0.03em' }}>
+          Descend into luxury
         </h1>
         <div style={{ width: 0, height: 1, background: 'var(--gold)', marginBottom: 32, opacity: 0.5, animation: 'lineW 1.6s ease 1.7s forwards' }} />
         <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(15px,1.7vw,19px)', fontStyle: 'italic', fontWeight: 300, color: 'rgba(240,236,228,0.62)', maxWidth: 460, lineHeight: 1.8, marginBottom: 52, opacity: 0, animation: 'fadeUp 1s ease 2s forwards' }}>
@@ -277,8 +277,35 @@ function FullBleed({ src, eyebrow, title, sub, align = 'left', pos = 'center', d
   )
 }
 
-// ─── INTERRUPT 1: Quote moment ────────────────────────────────────────────────
-function QuoteMoment({ quote, attr }: { quote:string; attr?:string }) {
+// ─── Wow capture — full bleed image immediately after hero ────────────────────
+function WowCapture() {
+  const { ref: pRef, p } = useScrollProgress()
+  const { ref: iRef, inView } = useInView(0.05)
+  const ref = useCallback((el: HTMLDivElement|null) => {
+    ;(pRef as any).current = el;
+    ;(iRef as any).current = el
+  }, [])
+  const imgY = `${(p - 0.5) * -10}%`
+  return (
+    <section ref={ref} style={{ height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: '-8% 0' }}>
+        <img src={IMGS.pool2} alt="Villa Azur" loading="eager" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%', transform: `translateY(${imgY})`, willChange: 'transform' }} />
+      </div>
+      {/* Very subtle vignette — let the image breathe */}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(5,5,7,0.35) 0%, transparent 30%, transparent 65%, rgba(5,5,7,0.7) 100%)' }} />
+      {/* Fade in from black — the transition from hero */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(5,5,7,1)', opacity: inView ? 0 : 1, transition: 'opacity 1.8s ease', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: 'clamp(48px,6vh,80px)', left: 'clamp(40px,6vw,96px)', opacity: inView ? 1 : 0, transform: inView ? 'none' : 'translateY(16px)', transition: 'all 1.6s ease 0.4s' }}>
+        <div className="track" style={{ marginBottom: 14, fontSize: 8 }}>Villa Azur · Grand Baie</div>
+        <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(18px,2.5vw,36px)', fontStyle: 'italic', fontWeight: 300, color: 'var(--stone)', lineHeight: 1.3, maxWidth: 480 }}>
+          Where the pool ends<br />and the Indian Ocean begins
+        </p>
+      </div>
+    </section>
+  )
+}
+
+
   const { ref, inView } = useInView(0.3)
   return (
     <section ref={ref} style={{ background: 'var(--surface)', padding: 'clamp(100px,14vw,180px) clamp(40px,12vw,200px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '55vh', textAlign: 'center', borderTop: '1px solid var(--borderl)', borderBottom: '1px solid var(--borderl)' }}>
@@ -302,16 +329,58 @@ function VillaScroll() {
     const container = containerRef.current
     const track = trackRef.current
     if (!container || !track) return
-    const onScroll = () => {
+
+    let currentX = 0
+    let targetX = 0
+    let lastScrollY = window.scrollY
+    let lastTime = performance.now()
+    let rafId: number
+
+    const getMaxX = () => track.scrollWidth - window.innerWidth
+
+    const getBaseProgress = () => {
       const rect = container.getBoundingClientRect()
       const sticky = container.offsetHeight - window.innerHeight
-      const progress = Math.min(1, Math.max(0, -rect.top / sticky))
-      const maxX = track.scrollWidth - window.innerWidth
-      track.style.transform = `translateX(${-progress * maxX}px)`
-      setActiveIdx(Math.round(progress * (VILLA_SLIDES.length - 1)))
+      return Math.min(1, Math.max(0, -rect.top / sticky))
     }
+
+    // Lerp the visual position toward target for smoothness
+    const animate = () => {
+      const diff = targetX - currentX
+      if (Math.abs(diff) > 0.5) {
+        currentX += diff * 0.08
+        track.style.transform = `translateX(${-currentX}px)`
+        setActiveIdx(Math.round((currentX / getMaxX()) * (VILLA_SLIDES.length - 1)))
+      }
+      rafId = requestAnimationFrame(animate)
+    }
+    rafId = requestAnimationFrame(animate)
+
+    const onScroll = () => {
+      const now = performance.now()
+      const dt = Math.max(1, now - lastTime)
+      const dy = window.scrollY - lastScrollY
+      const velocity = Math.abs(dy / dt) // px/ms
+
+      // Base target from scroll position
+      const baseProgress = getBaseProgress()
+      const baseX = baseProgress * getMaxX()
+
+      // Velocity boost — faster scrolling = jumps ahead more
+      // Cap boost so it never skips more than ~1.5 slides worth
+      const slideWidth = window.innerWidth
+      const boost = Math.min(dy * velocity * 1.8, slideWidth * 1.5)
+      targetX = Math.min(getMaxX(), Math.max(0, baseX + boost))
+
+      lastScrollY = window.scrollY
+      lastTime = now
+    }
+
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(rafId)
+    }
   }, [])
 
   return (
@@ -379,7 +448,7 @@ function VillaScroll() {
 
 // ─── INTERRUPT 3: Villa tiers ─────────────────────────────────────────────────
 const TIERS = [
-  { name:'Maison Lagon',  loc:'Trou aux Biches, West Coast', price:'£1,250,000', tag:'Entry Value', beds:3, baths:4, sqm:380, yield:'6.8%', desc:'A refined coastal retreat steps from Mauritius\'s most celebrated lagoon. Fully furnished, income-generating from day one. The ideal entry into Mauritian ownership.', img: IMGS.ext1 },
+  { name:'Maison Lagon',  loc:'Trou aux Biches, West Coast', price:'£1,250,000', tag:'Entry Value', beds:3, baths:4, sqm:380, yield:'6.8%', desc:'A refined coastal retreat steps from Mauritius\'s most celebrated lagoon. Fully furnished, income-generating from day one. The ideal entry into Mauritian ownership.', img: IMGS.pool },
   { name:'Domaine Noir',  loc:'Bel Ombre, South Coast',      price:'£2,100,000', tag:'Collector\'s', beds:4, baths:5, sqm:640, yield:'7.5%', desc:'Monolithic basalt, a 22-metre lap pool, and 1.4 hectares of private nature reserve on one of the island\'s last untouched coastlines. Architecture as a singular statement.', img: IMGS.pool },
   { name:'Villa Azur',    loc:'Grand Baie, North Coast',      price:'£3,750,000', tag:'Flagship',    beds:5, baths:6, sqm:820, yield:'9%',   desc:'Five en-suite suites, infinity pool, private beach pathway, wine cellar, spa suite, dedicated concierge. The definitive Mauritian estate on the island\'s most coveted coast.', img: IMGS.pool2 },
 ]
@@ -459,16 +528,46 @@ function MaterialsScroll() {
     const container = containerRef.current
     const track = trackRef.current
     if (!container || !track) return
+
+    let currentX = 0
+    let targetX = 0
+    let lastScrollY = window.scrollY
+    let lastTime = performance.now()
+    let rafId: number
+
+    const getMaxX = () => track.scrollWidth - window.innerWidth
+
+    const animate = () => {
+      const diff = targetX - currentX
+      if (Math.abs(diff) > 0.5) {
+        currentX += diff * 0.08
+        track.style.transform = `translateX(${-currentX}px)`
+        setActive(Math.round((currentX / getMaxX()) * (MATERIALS.length - 1)))
+      }
+      rafId = requestAnimationFrame(animate)
+    }
+    rafId = requestAnimationFrame(animate)
+
     const onScroll = () => {
+      const now = performance.now()
+      const dt = Math.max(1, now - lastTime)
+      const dy = window.scrollY - lastScrollY
+      const velocity = Math.abs(dy / dt)
       const rect = container.getBoundingClientRect()
       const sticky = container.offsetHeight - window.innerHeight
-      const progress = Math.min(1, Math.max(0, -rect.top / sticky))
-      const maxX = track.scrollWidth - window.innerWidth
-      track.style.transform = `translateX(${-progress * maxX}px)`
-      setActive(Math.round(progress * (MATERIALS.length - 1)))
+      const baseProgress = Math.min(1, Math.max(0, -rect.top / sticky))
+      const baseX = baseProgress * getMaxX()
+      const boost = Math.min(dy * velocity * 1.8, window.innerWidth * 1.5)
+      targetX = Math.min(getMaxX(), Math.max(0, baseX + boost))
+      lastScrollY = window.scrollY
+      lastTime = now
     }
+
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(rafId)
+    }
   }, [])
 
   return (
@@ -709,8 +808,8 @@ function HomePage() {
       <NavBar />
       <Hero />
 
-      {/* INTERRUPT: Quote 1 */}
-      <QuoteMoment quote="The rarest addresses are not found. They are recognised." attr="Éden Estates · Grand Baie, Mauritius" />
+      {/* WOW capture — full bleed, fades in from dark after hero */}
+      <WowCapture />
 
       {/* INTERRUPT: Horizontal villa photo scroll */}
       <VillaScroll />
@@ -724,7 +823,7 @@ function HomePage() {
       {/* Island */}
       <IslandSection />
 
-      {/* INTERRUPT: Quote 2 */}
+      {/* INTERRUPT: Quote */}
       <QuoteMoment quote="Not merely a home. A permanent address in the world's most tax-efficient paradise. From £1,250,000." attr="Permanent Residence Permit included for buyer, spouse and dependants" />
 
       {/* Staircase → Wellness */}
