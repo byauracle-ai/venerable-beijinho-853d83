@@ -8,190 +8,9 @@ export const Route = createFileRoute('/')({
 const BASE = 'https://raw.githubusercontent.com/byauracle-ai/venerable-beijinho-853d83/main/public'
 const img = (f: string) => `${BASE}/${encodeURIComponent(f)}`
 
-// ─── Mouse parallax hook ──────────────────────────────────────────────────────
-function useMouseParallax(strength = 12) {
-  const [pos, setPos] = useState({ x: 0, y: 0 })
-  useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      setPos({
-        x: (e.clientX / window.innerWidth  - 0.5),
-        y: (e.clientY / window.innerHeight - 0.5),
-      })
-    }
-    window.addEventListener('mousemove', fn, { passive: true })
-    return () => window.removeEventListener('mousemove', fn)
-  }, [])
-  return {
-    imgStyle: { transform: `translate(${pos.x * -strength}px, ${pos.y * -strength * 0.6}px)` },
-    textStyle: { transform: `translate(${pos.x * 5}px, ${pos.y * 3}px)` },
-  }
-}
-
-// ─── Custom cursor ────────────────────────────────────────────────────────────
-function CustomCursor() {
-  const dotRef  = useRef<HTMLDivElement>(null)
-  const ringRef = useRef<HTMLDivElement>(null)
-  const pos     = useRef({ x: -100, y: -100 })
-  const ring    = useRef({ x: -100, y: -100 })
-  const rafRef  = useRef<number>()
-
-  useEffect(() => {
-    // Hide system cursor globally
-    document.body.style.cursor = 'none'
-
-    const onMove = (e: MouseEvent) => {
-      pos.current = { x: e.clientX, y: e.clientY }
-      const t = e.target as HTMLElement
-      const isImg     = t.closest('img, .img-hover') !== null
-      const isBtn     = t.closest('a, button, .btn') !== null
-      const isDragging = document.body.classList.contains('dragging')
-
-      if (dotRef.current) {
-        dotRef.current.style.opacity = '1'
-        dotRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%,-50%) scale(${isDragging ? 1.8 : isBtn ? 1.4 : 1})`
-        dotRef.current.style.background = isBtn ? 'var(--gold2)' : 'var(--gold)'
-      }
-      if (ringRef.current) {
-        ringRef.current.style.width  = isImg ? '56px' : '28px'
-        ringRef.current.style.height = isImg ? '56px' : '28px'
-        ringRef.current.style.opacity = isDragging ? '0' : '1'
-        ringRef.current.style.borderColor = isBtn ? 'var(--gold2)' : 'rgba(196,160,90,0.5)'
-      }
-    }
-
-    // Lerp ring to dot position
-    const animate = () => {
-      ring.current.x += (pos.current.x - ring.current.x) * 0.1
-      ring.current.y += (pos.current.y - ring.current.y) * 0.1
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate(${ring.current.x}px, ${ring.current.y}px) translate(-50%,-50%)`
-      }
-      rafRef.current = requestAnimationFrame(animate)
-    }
-    rafRef.current = requestAnimationFrame(animate)
-
-    window.addEventListener('mousemove', onMove)
-    return () => {
-      document.body.style.cursor = ''
-      window.removeEventListener('mousemove', onMove)
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
-  }, [])
-
-  return (
-    <>
-      {/* Dot — snaps instantly */}
-      <div ref={dotRef} style={{
-        position: 'fixed', top: 0, left: 0, zIndex: 99999,
-        width: 6, height: 6, borderRadius: '50%',
-        background: 'var(--gold)', pointerEvents: 'none',
-        opacity: 0, transition: 'transform 0.08s ease, background 0.3s, width 0.3s, height 0.3s',
-        willChange: 'transform',
-      }} />
-      {/* Ring — lags behind (lerp) */}
-      <div ref={ringRef} style={{
-        position: 'fixed', top: 0, left: 0, zIndex: 99998,
-        width: 28, height: 28, borderRadius: '50%',
-        border: '1px solid rgba(196,160,90,0.5)',
-        pointerEvents: 'none', opacity: 0,
-        transition: 'width 0.4s ease, height 0.4s ease, opacity 0.3s, border-color 0.3s',
-        willChange: 'transform',
-      }} />
-    </>
-  )
-}
-
-// ─── Drag-to-scroll ───────────────────────────────────────────────────────────
-function DragScroll() {
-  useEffect(() => {
-    let startY = 0
-    let startScroll = 0
-    let lastY = 0
-    let lastTime = 0
-    let velocity = 0
-    let isDragging = false
-    let rafId: number
-
-    const onDown = (e: MouseEvent) => {
-      // Don't hijack clicks on interactive elements
-      const t = e.target as HTMLElement
-      if (t.closest('a, button, input, textarea, select')) return
-      isDragging = true
-      startY = e.clientY
-      startScroll = window.scrollY
-      lastY = e.clientY
-      lastTime = performance.now()
-      velocity = 0
-      document.body.classList.add('dragging')
-      document.body.style.userSelect = 'none'
-      document.body.style.cursor = 'none'
-    }
-
-    const onMove = (e: MouseEvent) => {
-      if (!isDragging) return
-      const now = performance.now()
-      const dt = Math.max(1, now - lastTime)
-      velocity = (lastY - e.clientY) / dt
-      lastY = e.clientY
-      lastTime = now
-      const delta = startY - e.clientY
-      window.scrollTo({ top: startScroll + delta * 1.4, behavior: 'instant' as ScrollBehavior })
-    }
-
-    const onUp = () => {
-      if (!isDragging) return
-      isDragging = false
-      document.body.classList.remove('dragging')
-      document.body.style.userSelect = ''
-
-      // Momentum coast
-      const momentumV = velocity * 400
-      let remaining = momentumV
-      const coast = () => {
-        if (Math.abs(remaining) < 0.5) return
-        remaining *= 0.92
-        window.scrollBy({ top: remaining, behavior: 'instant' as ScrollBehavior })
-        rafId = requestAnimationFrame(coast)
-      }
-      rafId = requestAnimationFrame(coast)
-    }
-
-    window.addEventListener('mousedown', onDown)
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => {
-      window.removeEventListener('mousedown', onDown)
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      cancelAnimationFrame(rafId)
-    }
-  }, [])
-  return null
-}
-
-// ─── Page load curtain ────────────────────────────────────────────────────────
-function LoadCurtain() {
-  const [gone, setGone] = useState(false)
-  const [visible, setVisible] = useState(true)
-  useEffect(() => {
-    const t1 = setTimeout(() => setGone(true), 1200)
-    const t2 = setTimeout(() => setVisible(false), 2000)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
-  if (!visible) return null
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 99997,
-      background: 'var(--black)',
-      opacity: gone ? 0 : 1,
-      transition: 'opacity 0.9s cubic-bezier(0.4,0,0.2,1)',
-      pointerEvents: gone ? 'none' : 'all',
-    }} />
-  )
-}
-
 const IMGS = {
   hero:    img('iron-wood-house-earth-lines-architects_18.jpg'),
+  ext1:    img('Screenshot 2026-03-21 175630.png'),
   living:  img('Screenshot 2026-05-14 201935.png'),
   horizon: img('Screenshot 2026-05-14 201944.png'),
   pool:    img('Screenshot 2026-05-14 202001.png'),
@@ -207,7 +26,7 @@ const IMGS = {
 
 // Villa gallery — the horizontal scroll sequence
 const VILLA_SLIDES = [
-  { src: IMGS.horizon, label: 'Arrival',        caption: 'A private approach through two hectares of tropical canopy' },
+  { src: IMGS.ext1,    label: 'Arrival',        caption: 'A private approach through two hectares of tropical canopy' },
   { src: IMGS.pool2,   label: 'The Pool',       caption: 'Infinity edge dissolving into the Indian Ocean at blue hour' },
   { src: IMGS.living,  label: 'Living',         caption: 'Floor-to-ceiling glass — interior and ocean as one' },
   { src: IMGS.horizon, label: 'The Horizon',    caption: 'Unobstructed panorama across the northern lagoon' },
@@ -294,11 +113,7 @@ function GlobalStyles() {
         font-weight: 300;
         -webkit-font-smoothing: antialiased;
         overflow-x: hidden;
-        cursor: none;
       }
-      body.dragging { cursor: none !important; }
-      body.dragging * { cursor: none !important; }
-      a, button { cursor: none; }
       body::after {
         content: ''; position: fixed; inset: 0;
         pointer-events: none; z-index: 9999; opacity: 0.025;
@@ -330,20 +145,11 @@ function GlobalStyles() {
       input:focus, textarea:focus { border-color:var(--gold); }
       input::placeholder, textarea::placeholder { color:var(--ash); }
 
-      @keyframes kb        { from{transform:scale(1)} to{transform:scale(1.05) translate(-0.4%,-0.4%)} }
-      @keyframes fadeUp    { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
-      @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
-      @keyframes lineW     { from{width:0} to{width:56px} }
-      @keyframes pulse     { 0%,100%{opacity:0.3;transform:scaleY(0.4)} 50%{opacity:1;transform:scaleY(1)} }
-      @keyframes blurIn    { from{opacity:0;filter:blur(18px);transform:translateY(12px)} to{opacity:1;filter:blur(0);transform:translateY(0)} }
-      @keyframes dragHint  { 0%{opacity:0;transform:translateY(4px)} 30%{opacity:0.5} 70%{opacity:0.5} 100%{opacity:0;transform:translateY(-4px)} }
-
-      /* Blur-to-sharp entrance for images */
-      .blur-enter { animation: blurIn 0.9s cubic-bezier(0.16,1,0.3,1) forwards; }
-
-      /* Img hover breathe */
-      section img { transition: filter 0.6s ease, transform 0.6s ease; }
-      section img:hover { filter: brightness(1.06); }
+      @keyframes kb      { from{transform:scale(1)} to{transform:scale(1.05) translate(-0.4%,-0.4%)} }
+      @keyframes fadeUp  { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+      @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+      @keyframes lineW   { from{width:0} to{width:56px} }
+      @keyframes pulse   { 0%,100%{opacity:0.3;transform:scaleY(0.4)} 50%{opacity:1;transform:scaleY(1)} }
 
       @media(max-width:768px){
         .hide-m { display:none !important; }
@@ -401,19 +207,16 @@ function NavBar() {
 
 // ─── Hero — staircase image ───────────────────────────────────────────────────
 function Hero() {
-  const { imgStyle, textStyle } = useMouseParallax(14)
   return (
     <section style={{ height: '100dvh', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div style={{ position: 'absolute', inset: '-6%', transition: 'transform 0.8s cubic-bezier(0.23,1,0.32,1)', ...imgStyle }}>
-        <img src={IMGS.hero} alt="Villa Azur"
-          onError={(e) => { (e.target as HTMLImageElement).src = IMGS.pool2 }}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%', animation: 'kb 22s ease-out forwards' }}
-        />
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <img src={IMGS.hero} alt="Villa Azur" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%', animation: 'kb 22s ease-out forwards' }} />
+        {/* Vignette — darker at edges, allows image to breathe in the centre */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(5,5,7,0.55) 0%, rgba(5,5,7,0.1) 30%, rgba(5,5,7,0.15) 60%, rgba(5,5,7,0.95) 100%)' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(5,5,7,0.5) 0%, transparent 55%, rgba(5,5,7,0.1) 100%)' }} />
       </div>
 
-      <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(40px,6vw,96px)', paddingBottom: 'clamp(80px,10vw,128px)', maxWidth: 860, transition: 'transform 0.6s cubic-bezier(0.23,1,0.32,1)', ...textStyle }}>
+      <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(40px,6vw,96px)', paddingBottom: 'clamp(80px,10vw,128px)', maxWidth: 860 }}>
         <div className="track" style={{ marginBottom: 28, opacity: 0, animation: 'fadeUp 1s ease 0.6s forwards' }}>
           Grand Baie · North Coast · Mauritius
         </div>
@@ -430,18 +233,10 @@ function Hero() {
         </div>
       </div>
 
-      {/* Scroll cue */}
+      {/* Scroll cue — bottom centre */}
       <div style={{ position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, opacity: 0, animation: 'fadeIn 1s ease 3.2s forwards' }}>
         <div className="track" style={{ fontSize: 7, color: 'rgba(196,160,90,0.5)' }}>Scroll</div>
         <div style={{ width: 1, height: 52, background: 'linear-gradient(to bottom, var(--gold), transparent)', animation: 'pulse 2s ease infinite' }} />
-      </div>
-
-      {/* Drag hint — appears then fades */}
-      <div style={{ position: 'absolute', bottom: 36, right: 'clamp(24px,5vw,72px)', zIndex: 2, opacity: 0, animation: 'dragHint 4.5s ease 4s forwards', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 18, height: 18, border: '1px solid rgba(196,160,90,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--gold)', opacity: 0.6 }} />
-        </div>
-        <span className="track" style={{ fontSize: 7, color: 'rgba(196,160,90,0.4)' }}>Click &amp; drag</span>
       </div>
 
       {/* Yield badge */}
@@ -459,38 +254,22 @@ function FullBleed({ src, eyebrow, title, sub, align = 'left', pos = 'center', d
   { src:string; eyebrow?:string; title:string; sub?:string; align?:'left'|'center'|'right'; pos?:string; dim?:number; id?:string }) {
   const { ref: pRef, p } = useScrollProgress()
   const { ref: iRef, inView } = useInView(0.08)
-  const { imgStyle, textStyle } = useMouseParallax(10)
   const ref = useCallback((el: HTMLDivElement|null) => {
     ;(pRef as any).current = el;
     ;(iRef as any).current = el
   }, [])
-  const scrollY = `${(p - 0.5) * -11}%`
+  const imgY = `${(p - 0.5) * -11}%`
   const aStyle = align === 'center' ? { textAlign:'center' as const, left:0, right:0 }
     : align === 'right' ? { textAlign:'right' as const, right:'clamp(40px,7vw,120px)' }
     : { left:'clamp(40px,7vw,120px)' }
 
   return (
     <section id={id} style={{ height: '100dvh', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div style={{ position: 'absolute', inset: '-10%', overflow: 'hidden' }}>
-        <img
-          src={src} alt={title} loading="lazy"
-          className={inView ? 'blur-enter' : ''}
-          style={{
-            width: '100%', height: '100%', objectFit: 'cover', objectPosition: pos,
-            transform: `translateY(${scrollY}) ${imgStyle.transform}`,
-            willChange: 'transform', opacity: inView ? 1 : 0,
-          }}
-        />
+      <div style={{ position: 'absolute', inset: '-8% 0' }}>
+        <img src={src} alt={title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: pos, transform: `translateY(${imgY})`, willChange: 'transform' }} />
       </div>
       <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, rgba(5,5,7,${dim+0.4}) 0%, rgba(5,5,7,${dim*0.25}) 50%, transparent 100%)` }} />
-      <div ref={ref} style={{
-        position: 'relative', zIndex: 2,
-        padding: 'clamp(40px,6vw,96px)', paddingBottom: 'clamp(60px,7vw,100px)',
-        ...aStyle,
-        opacity: inView ? 1 : 0, transform: inView ? 'none' : 'translateY(20px)',
-        transition: 'opacity 1.5s ease, transform 1.5s ease',
-        ...textStyle,
-      }}>
+      <div ref={ref} style={{ position: 'relative', zIndex: 2, padding: 'clamp(40px,6vw,96px)', paddingBottom: 'clamp(60px,7vw,100px)', ...aStyle, opacity: inView?1:0, transform: inView?'none':'translateY(20px)', transition: 'opacity 1.5s ease, transform 1.5s ease' }}>
         {eyebrow && <div className="track" style={{ marginBottom: 18 }}>{eyebrow}</div>}
         <h2 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(36px,5.5vw,84px)', fontWeight: 300, fontStyle: 'italic', lineHeight: 1.04, color: 'var(--stone)', margin: 0 }}>{title}</h2>
         {sub && <p style={{ fontFamily: 'var(--F)', fontSize: 'clamp(14px,1.5vw,18px)', fontStyle: 'italic', color: 'rgba(240,236,228,0.58)', marginTop: 18, maxWidth: 460, lineHeight: 1.75, ...(align === 'center' ? { margin: '18px auto 0', display: 'block' } : {}) }}>{sub}</p>}
@@ -623,7 +402,7 @@ function VillaScroll() {
       </div>
 
       {/* Sticky horizontal track */}
-      <div ref={containerRef} style={{ height: `${VILLA_SLIDES.length * 60}vh`, position: 'relative' }}>
+      <div ref={containerRef} style={{ height: `${VILLA_SLIDES.length * 100}vh`, position: 'relative' }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', background: 'var(--black)' }}>
 
           {/* Slide track */}
@@ -664,6 +443,26 @@ function VillaScroll() {
               {VILLA_SLIDES[activeIdx]?.label}
             </div>
           </div>
+
+          {/* Next arrow — bottom right */}
+          <div style={{ position: 'absolute', bottom: 'clamp(32px,5vh,60px)', right: 'clamp(32px,4vw,60px)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, zIndex: 10 }}>
+            {/* → next slide hint */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: activeIdx < VILLA_SLIDES.length - 1 ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+              <span className="track" style={{ fontSize: 7, color: 'rgba(196,160,90,0.5)', letterSpacing: '0.3em' }}>Next</span>
+              <svg width="32" height="12" viewBox="0 0 32 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.5 }}>
+                <line x1="0" y1="6" x2="26" y2="6" stroke="#c4a05a" strokeWidth="0.75"/>
+                <polyline points="22,2 28,6 22,10" fill="none" stroke="#c4a05a" strokeWidth="0.75"/>
+              </svg>
+            </div>
+            {/* ↓ escape hint — always visible */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: 0.35 }}>
+              <span className="track" style={{ fontSize: 7, color: 'var(--gold)', letterSpacing: '0.3em' }}>Continue</span>
+              <svg width="12" height="28" viewBox="0 0 12 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="6" y1="0" x2="6" y2="22" stroke="#c4a05a" strokeWidth="0.75"/>
+                <polyline points="2,18 6,24 10,18" fill="none" stroke="#c4a05a" strokeWidth="0.75"/>
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -672,7 +471,7 @@ function VillaScroll() {
 
 // ─── INTERRUPT 3: Villa tiers ─────────────────────────────────────────────────
 const TIERS = [
-  { name:'Maison Lagon',  loc:'Trou aux Biches, West Coast', price:'£1,250,000', tag:'Entry Value', beds:3, baths:4, sqm:380, yield:'6.8%', desc:'A refined coastal retreat steps from Mauritius\'s most celebrated lagoon. Fully furnished, income-generating from day one. The ideal entry into Mauritian ownership.', img: IMGS.dining },
+  { name:'Maison Lagon',  loc:'Trou aux Biches, West Coast', price:'£1,250,000', tag:'Entry Value', beds:3, baths:4, sqm:380, yield:'6.8%', desc:'A refined coastal retreat steps from Mauritius\'s most celebrated lagoon. Fully furnished, income-generating from day one. The ideal entry into Mauritian ownership.', img: IMGS.living },
   { name:'Domaine Noir',  loc:'Bel Ombre, South Coast',      price:'£2,100,000', tag:'Collector\'s', beds:4, baths:5, sqm:640, yield:'7.5%', desc:'Monolithic basalt, a 22-metre lap pool, and 1.4 hectares of private nature reserve on one of the island\'s last untouched coastlines. Architecture as a singular statement.', img: IMGS.pool },
   { name:'Villa Azur',    loc:'Grand Baie, North Coast',      price:'£3,750,000', tag:'Flagship',    beds:5, baths:6, sqm:820, yield:'9%',   desc:'Five en-suite suites, infinity pool, private beach pathway, wine cellar, spa suite, dedicated concierge. The definitive Mauritian estate on the island\'s most coveted coast.', img: IMGS.pool2 },
 ]
@@ -734,12 +533,12 @@ function VillaTiers() {
 
 // ─── INTERRUPT 4: Horizontal materials scroll ─────────────────────────────────
 const MATERIALS = [
-  { n:'Reclaimed Teak',     s:'Floors · Ceilings · Louvres',     d:'Sourced from 200-year-old Indonesian river barges. Each plank carries its own century — grain patterns and silver-grey patina no fabrication can replicate.',     tex: img('teak.jpg') },
-  { n:'Volcanic Basalt',    s:'Walls · Pool surround · Columns',  d:'Quarried from the Mauritian interior. Cut to 600mm slabs, honed to a satin finish that is cool to the touch at every hour of the day.',                        tex: img('basalt.jpg') },
-  { n:'Calacatta Oro',      s:'Kitchen · Bathrooms · Vanities',   d:'Single-slab marble selected in person at the Carrara quarry. Gold veining matched across every surface. No two pieces are the same.',                          tex: img('calcatta.jpg') },
-  { n:'Belgian Linen',      s:'Bedding · Drapes · Day beds',      d:'400-thread stonewashed linen, laundered in rainwater collected on site. Weighted to 280gsm — the precise threshold between luxurious and effortless.',           tex: img('linen.jpg') },
-  { n:'Hand-Laid Terrazzo', s:'Terrace · Bathrooms · Hall',       d:'Rose quartz, serpentine and white marble. Mixed on site by local Mauritian craftsmen. Each floor a singular composition.',                                      tex: img('calcatta.jpg') },
-  { n:'Unlacquered Brass',  s:'Hardware · Fixtures · Lighting',   d:'From a single foundry in Burgundy. Left to develop its own patina through the first year of residence. Every handle, tap and fitting from one source.',         tex: img('brass.jpg') },
+  { n:'Reclaimed Teak',     s:'Floors · Ceilings · Louvres',     d:'Sourced from 200-year-old Indonesian river barges. Each plank carries its own century — grain patterns and silver-grey patina no fabrication can replicate.',     tex:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=85&auto=format' },
+  { n:'Volcanic Basalt',    s:'Walls · Pool surround · Columns',  d:'Quarried from the Mauritian interior. Cut to 600mm slabs, honed to a satin finish that is cool to the touch at every hour of the day.',                        tex:'https://images.unsplash.com/photo-1609155702853-ee1e5abcbe19?w=900&q=85&auto=format' },
+  { n:'Calacatta Oro',      s:'Kitchen · Bathrooms · Vanities',   d:'Single-slab marble selected in person at the Carrara quarry. Gold veining matched across every surface. No two pieces are the same.',                          tex:'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=900&q=85&auto=format' },
+  { n:'Belgian Linen',      s:'Bedding · Drapes · Day beds',      d:'400-thread stonewashed linen, laundered in rainwater collected on site. Weighted to 280gsm — the precise threshold between luxurious and effortless.',           tex:'https://images.unsplash.com/photo-1567225557594-88887e4d1af3?w=900&q=85&auto=format' },
+  { n:'Hand-Laid Terrazzo', s:'Terrace · Bathrooms · Hall',       d:'Rose quartz, serpentine and white marble. Mixed on site by local Mauritian craftsmen. Each floor a singular composition.',                                      tex:'https://images.unsplash.com/photo-1615971677499-5467cbab01c0?w=900&q=85&auto=format' },
+  { n:'Unlacquered Brass',  s:'Hardware · Fixtures · Lighting',   d:'From a single foundry in Burgundy. Left to develop its own patina through the first year of residence. Every handle, tap and fitting from one source.',         tex:'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=85&auto=format' },
 ]
 
 function MaterialsScroll() {
@@ -801,7 +600,7 @@ function MaterialsScroll() {
         <h2 style={{ fontFamily: 'var(--F)', fontSize: 'clamp(30px,4.2vw,62px)', fontWeight: 300, fontStyle: 'italic', color: 'var(--stone)', maxWidth: 560 }}>The material world</h2>
       </div>
 
-      <div ref={containerRef} style={{ height: `${MATERIALS.length * 60}vh`, position: 'relative' }}>
+      <div ref={containerRef} style={{ height: `${MATERIALS.length * 100}vh`, position: 'relative' }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
           <div ref={trackRef} style={{ display: 'flex', height: '100%', willChange: 'transform', transition: 'transform 0.06s linear' }}>
             {MATERIALS.map(({ n, s, d, tex }, i) => (
@@ -893,25 +692,13 @@ function IslandSection() {
 // ─── Staircase descent ────────────────────────────────────────────────────────
 function StaircaseDescent() {
   const { ref, p } = useScrollProgress()
-  const dark = p < 0.55 ? 0 : Math.min(1, (p - 0.55) / 0.38)
-  const txt  = p < 0.70 ? 0 : Math.min(1, (p - 0.70) * 8)
-  // Subtle rotation — tilts into the dark as you descend
-  const rotate = p * 2.5
+  const dark = p < 0.58 ? 0 : Math.min(1, (p - 0.58) / 0.34)
+  const txt  = p < 0.72 ? 0 : Math.min(1, (p - 0.72) * 9)
   return (
     <div ref={ref} style={{ minHeight: '150dvh', position: 'relative', overflow: 'hidden' }}>
-      <img
-        src={IMGS.hero}
-        alt="Descend"
-        onError={(e) => { (e.target as HTMLImageElement).src = IMGS.pool2 }}
-        style={{
-          width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top',
-          position:'absolute', inset:0,
-          transform:`scale(${1 + p * 0.05}) rotate(${rotate}deg)`,
-          transformOrigin:'center center',
-        }}
-      />
+      <img src={IMGS.hero} alt="Descend" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center top', position:'absolute', inset:0, transform:`scale(${1 + p * 0.05})`, transformOrigin:'center bottom' }} />
       <div style={{ position:'absolute', inset:0, background:`rgba(3,3,8,${dark})` }} />
-      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:40, opacity:txt, transition:'opacity 0.2s' }}>
+      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:40, opacity:txt }}>
         <div className="track" style={{ marginBottom:22, letterSpacing:'0.45em' }}>Descend · Restore · Transcend</div>
         <h2 style={{ fontFamily:'var(--F)', fontSize:'clamp(30px,5vw,68px)', fontWeight:300, fontStyle:'italic', color:'var(--stone)', lineHeight:1.1 }}>
           The Wellness<br />
@@ -1075,9 +862,6 @@ function HomePage() {
   return (
     <>
       <GlobalStyles />
-      <LoadCurtain />
-      <CustomCursor />
-      <DragScroll />
       <ProgressBar />
       <NavBar />
       <Hero />
