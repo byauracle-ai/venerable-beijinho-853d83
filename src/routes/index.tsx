@@ -11,7 +11,7 @@ const p = (f: string) => `${PUB}/${encodeURIComponent(f)}`
 
 const IMG = {
   // Descent sequence
-  hero:       p('Screenshot 2026-05-14 202001.png'), // pool shot as stair fallback
+  hero:       p('descent.jpg'), 
   entrance:   p('Sea VIew.png'),                     // exact filename from screenshot
   window:     p('window.png'),
   seaView2:   p('Sea view 2.png'),
